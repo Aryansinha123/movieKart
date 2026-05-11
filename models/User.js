@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema(
 
     bio: {
       type: String,
-      default: "",
+      default: "Movie enthusiast 🎬",
     },
 
     watchlist: [
@@ -40,16 +40,6 @@ const UserSchema = new mongoose.Schema(
         type: Number,
       },
     ],
-
-    bio: {
-      type: String,
-      default: "Movie enthusiast 🎬",
-    },
-
-    avatar: {
-      type: String,
-      default: "",
-    },
 
     followers: [
       {

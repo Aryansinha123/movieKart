@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import Review from "@/models/Review";
+import User from "@/models/User";
+import Activity from "@/models/Activity";
 
 export async function GET(req) {
   try {
@@ -73,6 +75,20 @@ export async function POST(req) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();
 
+    // Log activity
+    const user = await User.findById(userData.id).select("avatar").lean();
+    await Activity.create({
+      userId: userData.id,
+      username,
+      userAvatar: user?.avatar || "",
+      type: "review",
+      movieId,
+      meta: {
+        rating,
+        comment: comment.slice(0, 200),
+      },
+    });
+
     return NextResponse.json({ success: true, review });
   } catch (error) {
     const isDuplicate = error?.code === 11000;
@@ -82,4 +98,3 @@ export async function POST(req) {
     );
   }
 }
-

@@ -112,6 +112,14 @@ export default function Navbar() {
         >
           Discover
         </Link>
+        {isMounted && user && (
+          <Link
+            href="/feed"
+            className="text-zinc-300 hover:text-white transition-colors flex items-center gap-2"
+          >
+            Feed
+          </Link>
+        )}
         <Link
           href="/collection"
           className="text-zinc-300 hover:text-white transition-colors"

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Activity from "@/models/Activity";
 
 import { getUserFromToken } from "@/lib/getUser";
 
@@ -28,6 +29,16 @@ export async function POST(req) {
       user.watchlist.push(movieId);
 
       await user.save();
+
+      // Log activity
+      await Activity.create({
+        userId: user._id,
+        username: user.username,
+        userAvatar: user.avatar || "",
+        type: "watchlist_add",
+        movieId,
+        meta: {},
+      });
     }
 
     return NextResponse.json({

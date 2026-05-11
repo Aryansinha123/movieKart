@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Activity from "@/models/Activity";
 import { getUserFromToken } from "@/lib/getUser";
 
 export async function POST(req) {
@@ -27,6 +28,16 @@ export async function POST(req) {
 
     if (!user.watchedMovies.includes(movieId)) {
       user.watchedMovies.push(movieId);
+
+      // Log activity
+      await Activity.create({
+        userId: user._id,
+        username: user.username,
+        userAvatar: user.avatar || "",
+        type: "watched_add",
+        movieId,
+        meta: {},
+      });
     }
 
     // Optional: if a movie is marked watched, remove from watchlist.
@@ -87,4 +98,3 @@ export async function DELETE(req) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-

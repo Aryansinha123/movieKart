@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import Collection from "@/models/Collection";
+import User from "@/models/User";
+import Activity from "@/models/Activity";
 
 export async function POST(req, context) {
   try {
@@ -32,6 +34,20 @@ export async function POST(req, context) {
     if (!collection.movies.includes(movieId)) {
       collection.movies.push(movieId);
       await collection.save();
+
+      // Log activity
+      const user = await User.findById(userData.id).select("username avatar").lean();
+      await Activity.create({
+        userId: userData.id,
+        username: user?.username || userData.username || "User",
+        userAvatar: user?.avatar || "",
+        type: "collection_add",
+        movieId,
+        meta: {
+          collectionName: collection.name,
+          collectionId: collection._id.toString(),
+        },
+      });
     }
 
     return NextResponse.json({ success: true, collection });
@@ -73,4 +89,3 @@ export async function DELETE(req, context) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-

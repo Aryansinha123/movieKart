@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import Collection from "@/models/Collection";
+import Review from "@/models/Review";
+import Activity from "@/models/Activity";
 
 export async function GET(req, context) {
   try {
@@ -28,9 +30,23 @@ export async function GET(req, context) {
       .sort({ updatedAt: -1 })
       .lean();
 
+    // Get recent reviews by this user
+    const recentReviews = await Review.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+
+    // Get recent activity
+    const recentActivity = await Activity.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+
     return NextResponse.json({
       ...user.toObject(),
       publicCollections,
+      recentReviews,
+      recentActivity,
     });
   } catch (error) {
     return NextResponse.json({
