@@ -1,0 +1,6 @@
+npm install next-auth
+ npm install mongoose bcryptjs jsonwebtoken axios
+ npm install lucide-react
+ npm install openai
+ npm install mongoose
+ npm install bcryptjs jsonwebtoken
