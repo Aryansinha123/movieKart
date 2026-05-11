@@ -87,6 +87,7 @@ import Image from "next/image";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "@/components/movie/WatchListButton";
+import ReviewsSection from "@/components/movie/ReviewsSection";
 
 async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
   let lastError;
@@ -215,6 +216,8 @@ export default async function MoviePage({ params }) {
           </div>
         </div>
       </div>
+
+      <ReviewsSection movieId={movie.id} />
     </main>
   );
 }

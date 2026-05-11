@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye } from "lucide-react";
+import Image from "next/image";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -18,16 +19,19 @@ function getUserFromToken(token) {
 
 export default function Navbar() {
   const router = useRouter();
-  const [user, setUser] = useState(() => {
-    if (typeof window === "undefined") return null;
+  // Keep the first render identical between server and client to avoid hydration mismatch.
+  const [isMounted, setIsMounted] = useState(false);
+  const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    setIsMounted(true);
     const token = localStorage.getItem("token");
     const parsed = getUserFromToken(token);
     if (!parsed && token) localStorage.removeItem("token");
-    return parsed;
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+    setUser(parsed);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -81,7 +85,7 @@ export default function Navbar() {
         >
           Collections
         </Link>
-        {user && (
+        {isMounted && user && (
           <Link
             href="/watchlist"
             className="text-zinc-300 hover:text-white transition-colors flex items-center gap-2"
@@ -90,9 +94,18 @@ export default function Navbar() {
             Watchlist
           </Link>
         )}
+        {isMounted && user && (
+          <Link
+            href="/watched"
+            className="text-zinc-300 hover:text-white transition-colors flex items-center gap-2"
+          >
+            <Eye size={16} />
+            Watched
+          </Link>
+        )}
 
         {/* Auth section */}
-        {isLoading ? (
+        {!isMounted ? (
           <div className="w-[90px] h-9 rounded-lg bg-zinc-800 animate-pulse" />
         ) : user ? (
           <div className="relative" ref={dropdownRef}>
@@ -102,8 +115,18 @@ export default function Navbar() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 transition-all duration-200 group"
             >
               {/* Avatar circle */}
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
-                {userInitial}
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-xs font-bold text-white shadow-md overflow-hidden">
+                {user?.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt="Avatar"
+                    width={28}
+                    height={28}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  userInitial
+                )}
               </div>
               <span className="text-sm text-zinc-200 group-hover:text-white transition-colors max-w-[100px] truncate">
                 {user.username || "User"}
@@ -136,12 +159,28 @@ export default function Navbar() {
                     Watchlist
                   </Link>
                   <Link
-                    href="/profile"
+                    href="/watched"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                  >
+                    <Eye size={16} />
+                    Watched
+                  </Link>
+                  <Link
+                    href={`/profile/${user?.username || "user"}`}
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
                   >
                     <User size={16} />
                     My Profile
+                  </Link>
+                  <Link
+                    href="/settings"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                  >
+                    <User size={16} />
+                    Edit Profile
                   </Link>
                   <button
                     id="logout-button"

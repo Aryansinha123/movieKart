@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import MovieCard from "@/components/movie/MovieCard";
-import WatchedButton from "@/components/movie/WatchedButton";
 
-export default function WatchlistPage() {
+export default function WatchedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [movies, setMovies] = useState([]);
@@ -26,11 +25,11 @@ export default function WatchlistPage() {
 
         if (!token) {
           setMovies([]);
-          setError("Please login to view your watchlist.");
+          setError("Please login to view your watched movies.");
           return;
         }
 
-        const idsRes = await fetch("/api/watchlist", {
+        const idsRes = await fetch("/api/watched", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -39,7 +38,7 @@ export default function WatchlistPage() {
         const idsData = await idsRes.json().catch(() => null);
 
         if (!idsRes.ok || !idsData || idsData?.success === false) {
-          throw new Error(idsData?.message || "Failed to load watchlist.");
+          throw new Error(idsData?.message || "Failed to load watched movies.");
         }
 
         const ids = Array.isArray(idsData) ? idsData : [];
@@ -71,29 +70,20 @@ export default function WatchlistPage() {
     };
   }, [token]);
 
-  function handleMarkedWatched(movieId) {
-    setMovies((prev) => prev.filter((m) => m?.id !== movieId));
-  }
-
   return (
     <main className="min-h-screen bg-black text-white px-8 py-10">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-end justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-3">
-              <h1 className="text-3xl font-bold">My Watchlist</h1>
+              <h1 className="text-3xl font-bold">Watched</h1>
               {!isLoading && !error && (
                 <span className="text-sm text-zinc-400">Total: {movies.length}</span>
               )}
             </div>
-            <p className="text-zinc-400 mt-1">
-              Movies you’ve saved to watch later.
-            </p>
+            <p className="text-zinc-400 mt-1">Movies you’ve already watched.</p>
           </div>
-          <Link
-            href="/"
-            className="text-sm text-zinc-300 hover:text-white transition-colors"
-          >
+          <Link href="/" className="text-sm text-zinc-300 hover:text-white transition-colors">
             Back to Home
           </Link>
         </div>
@@ -114,20 +104,16 @@ export default function WatchlistPage() {
             </div>
           ) : movies.length === 0 ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <p className="text-zinc-300">
-                Your watchlist is empty. Open a movie and click “+ Watchlist”.
-              </p>
+              <p className="text-zinc-300">No watched movies yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {movies.map((movie, i) => (
-                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i}>
-                  <MovieCard movie={movie} priority={i < 2} />
-                  <WatchedButton
-                    movieId={movie?.id}
-                    onSuccess={() => handleMarkedWatched(movie?.id)}
-                  />
-                </div>
+                <MovieCard
+                  key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i}
+                  movie={movie}
+                  priority={i < 2}
+                />
               ))}
             </div>
           )}

@@ -9,11 +9,19 @@ export default function TrendingMovies() {
 
   useEffect(() => {
     async function fetchMovies() {
-      const res = await fetch("/api/movies/trending");
+      try {
+        const res = await fetch("/api/movies/trending");
+        const data = await res.json().catch(() => null);
 
-      const data = await res.json();
+        if (!res.ok || !data || !Array.isArray(data?.results)) {
+          setMovies([]);
+          return;
+        }
 
-      setMovies(data.results);
+        setMovies(data.results);
+      } catch {
+        setMovies([]);
+      }
     }
 
     fetchMovies();

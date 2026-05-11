@@ -33,7 +33,7 @@ import Link from "next/link";
 
 import { getImagePath } from "@/utils/imagePath";
 
-export default function MovieCard({ movie }) {
+export default function MovieCard({ movie, priority = false }) {
   return (
     <Link href={`/movie/${movie.id}`}>
       <div className="bg-zinc-900 rounded-xl overflow-hidden hover:scale-105 transition duration-300 cursor-pointer">
@@ -43,6 +43,7 @@ export default function MovieCard({ movie }) {
             alt={movie.title}
             width={500}
             height={750}
+            priority={priority}
             className="w-full h-[350px] object-cover"
           />
         ) : (
