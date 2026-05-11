@@ -26,11 +26,44 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     setIsMounted(true);
     const token = localStorage.getItem("token");
     const parsed = getUserFromToken(token);
-    if (!parsed && token) localStorage.removeItem("token");
+    if (!parsed && token) {
+      localStorage.removeItem("token");
+      setUser(null);
+      return;
+    }
+
     setUser(parsed);
+
+    async function hydrateUser() {
+      if (!token) return;
+      try {
+        const res = await fetch("/api/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+
+        if (res.status === 431) {
+          localStorage.removeItem("token");
+          if (!cancelled) setUser(null);
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) return;
+        if (!cancelled) setUser((prev) => ({ ...prev, ...data.user }));
+      } catch {
+        // ignore
+      }
+    }
+
+    hydrateUser();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Close dropdown on outside click

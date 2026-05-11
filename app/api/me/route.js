@@ -105,7 +105,6 @@ export async function PATCH(req) {
         id: user._id,
         username: user.username,
         email: user.email,
-        avatar: user.avatar || "",
       },
       process.env.NEXTAUTH_SECRET,
       { expiresIn: "7d" }

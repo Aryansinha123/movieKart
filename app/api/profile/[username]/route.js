@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Collection from "@/models/Collection";
 
 export async function GET(req, context) {
   try {
@@ -20,7 +21,17 @@ export async function GET(req, context) {
       });
     }
 
-    return NextResponse.json(user);
+    const publicCollections = await Collection.find({
+      ownerId: user._id,
+      isPublic: true,
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return NextResponse.json({
+      ...user.toObject(),
+      publicCollections,
+    });
   } catch (error) {
     return NextResponse.json({
       success: false,

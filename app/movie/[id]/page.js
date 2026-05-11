@@ -88,6 +88,7 @@ import Image from "next/image";
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "@/components/movie/WatchListButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
+import CollectionPicker from "@/components/collection/CollectionPicker";
 
 async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
   let lastError;
@@ -132,10 +133,26 @@ async function getMovie(id) {
   return await res.json().catch(() => null);
 }
 
+async function getCredits(id) {
+  if (!process.env.TMDB_API_KEY) return null;
+
+  const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/credits`, {
+    headers: {
+      Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+      accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+  return await res.json().catch(() => null);
+}
+
 export default async function MoviePage({ params }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const movie = id ? await getMovie(id) : null;
+  const credits = id ? await getCredits(id) : null;
 
   if (!movie) {
     return (
@@ -209,6 +226,8 @@ export default async function MoviePage({ params }) {
             <div className="flex gap-4 mt-8">
               <WatchlistButton movieId={movie.id} />
 
+              <CollectionPicker movieId={movie.id} />
+
               <button className="bg-zinc-800 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-700">
                 ✓ Watched
               </button>
@@ -216,6 +235,39 @@ export default async function MoviePage({ params }) {
           </div>
         </div>
       </div>
+
+      {/* Cast */}
+      {Array.isArray(credits?.cast) && credits.cast.length > 0 ? (
+        <section className="max-w-6xl mx-auto px-10 pt-10">
+          <h2 className="text-2xl font-bold">Cast</h2>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {credits.cast.slice(0, 12).map((p) => (
+              <div
+                key={p.cast_id ?? p.credit_id ?? p.id}
+                className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden"
+              >
+                {p.profile_path ? (
+                  <Image
+                    src={getImagePath(p.profile_path)}
+                    alt={p.name}
+                    width={300}
+                    height={450}
+                    className="w-full h-[210px] object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-[210px] bg-zinc-800 flex items-center justify-center text-zinc-400 text-sm">
+                    No Image
+                  </div>
+                )}
+                <div className="p-3">
+                  <p className="font-semibold text-sm truncate">{p.name}</p>
+                  <p className="text-xs text-zinc-400 mt-1 truncate">{p.character}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <ReviewsSection movieId={movie.id} />
     </main>
