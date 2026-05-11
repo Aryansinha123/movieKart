@@ -7,6 +7,7 @@ import Image from "next/image";
 export default function FeedPage() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [movieMap, setMovieMap] = useState({});
 
   useEffect(() => {
     async function fetchFeed() {
@@ -21,7 +22,7 @@ export default function FeedPage() {
             Authorization: `Bearer ${token}`,
           },
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (data.success) {
           setActivities(data.activities);
         }
@@ -33,6 +34,45 @@ export default function FeedPage() {
     }
     fetchFeed();
   }, []);
+
+  useEffect(() => {
+    async function hydrateMovies() {
+      const ids = Array.from(
+        new Set(
+          (activities || [])
+            .map((a) => a?.movieId)
+            .filter((id) => typeof id === "number" || typeof id === "string")
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id))
+        )
+      );
+
+      const missing = ids.filter((id) => movieMap[id] === undefined);
+      if (missing.length === 0) return;
+
+      const results = await Promise.all(
+        missing.map(async (id) => {
+          try {
+            const res = await fetch(`/api/movies/${id}`, { cache: "no-store" });
+            if (!res.ok) return [id, null];
+            const data = await res.json().catch(() => null);
+            return [id, data || null];
+          } catch {
+            return [id, null];
+          }
+        })
+      );
+
+      setMovieMap((prev) => {
+        const next = { ...prev };
+        for (const [id, movie] of results) next[id] = movie;
+        return next;
+      });
+    }
+
+    hydrateMovies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activities]);
 
   if (loading) {
     return (
@@ -94,6 +134,49 @@ export default function FeedPage() {
                       <span className="font-semibold italic">{activity.meta.collectionName}</span>
                     )}
                   </div>
+
+                  {/* Movie preview */}
+                  <Link
+                    href={`/movie/${activity.movieId}`}
+                    className="mt-3 block rounded-xl border border-zinc-800 bg-zinc-950/40 hover:bg-zinc-950/60 transition-colors overflow-hidden"
+                  >
+                    <div className="flex gap-4 p-4">
+                      <div className="w-[72px] h-[108px] rounded-lg bg-zinc-800 overflow-hidden flex-shrink-0">
+                        {movieMap?.[activity.movieId]?.poster_path ? (
+                          <Image
+                            src={`https://image.tmdb.org/t/p/w300${movieMap[activity.movieId].poster_path}`}
+                            alt={movieMap[activity.movieId].title || `Movie ${activity.movieId}`}
+                            width={144}
+                            height={216}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">
+                            #{activity.movieId}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-bold text-lg truncate">
+                          {movieMap?.[activity.movieId]?.title || "Loading movie..."}
+                        </p>
+                        <div className="mt-1 flex items-center gap-3 text-sm text-zinc-400">
+                          {movieMap?.[activity.movieId]?.release_date ? (
+                            <span>{movieMap[activity.movieId].release_date}</span>
+                          ) : null}
+                          {movieMap?.[activity.movieId]?.vote_average ? (
+                            <span>⭐ {Number(movieMap[activity.movieId].vote_average).toFixed(1)}</span>
+                          ) : null}
+                        </div>
+                        {activity.type === "review" && activity.meta?.comment ? (
+                          <p className="mt-3 text-sm text-zinc-300 italic line-clamp-2">
+                            “{activity.meta.comment}”
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </Link>
                   
                   {activity.type === "review" && activity.meta?.comment && (
                     <div className="mt-3 bg-zinc-800/50 p-4 rounded-lg italic text-zinc-300 border-l-4 border-red-500">
@@ -102,12 +185,6 @@ export default function FeedPage() {
                     </div>
                   )}
 
-                  <div className="mt-4">
-                     <Link href={`/movie/${activity.movieId}`} className="inline-block bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                       View Movie #{activity.movieId}
-                     </Link>
-                  </div>
-                  
                   <div className="mt-4 text-xs text-zinc-500">
                     {new Date(activity.createdAt).toLocaleDateString()} at {new Date(activity.createdAt).toLocaleTimeString()}
                   </div>

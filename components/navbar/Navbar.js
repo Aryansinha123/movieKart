@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye } from "lucide-react";
 import Image from "next/image";
+import UserSearch from "@/components/navbar/UserSearch";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -144,6 +145,9 @@ export default function Navbar() {
             Watched
           </Link>
         )}
+
+        {/* User Search */}
+        {isMounted && user && <UserSearch />}
 
         {/* Auth section */}
         {!isMounted ? (
