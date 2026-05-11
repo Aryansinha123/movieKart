@@ -22,9 +22,46 @@
 // }
 import { NextResponse } from "next/server";
 
+async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeoutId);
+      return res;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastError = err;
+
+      const isAbort = err?.name === "AbortError";
+      const isConnReset = err?.cause?.code === "ECONNRESET" || err?.code === "ECONNRESET";
+      const isRetryable = isAbort || isConnReset;
+
+      if (!isRetryable || attempt === retries) break;
+
+      // small exponential backoff: 250ms, 500ms, 1000ms...
+      const backoffMs = 250 * 2 ** attempt;
+      await new Promise((r) => setTimeout(r, backoffMs));
+    }
+  }
+
+  throw lastError;
+}
+
 export async function GET() {
   try {
-    const response = await fetch(
+    if (!process.env.TMDB_API_KEY) {
+      return NextResponse.json(
+        { success: false, message: "TMDB API key is missing." },
+        { status: 500 }
+      );
+    }
+
+    const response = await fetchWithRetry(
       "https://api.themoviedb.org/3/trending/movie/week",
       {
         headers: {
@@ -32,8 +69,22 @@ export async function GET() {
           accept: "application/json",
         },
         cache: "no-store",
-      }
+      },
+      { retries: 2, timeoutMs: 8000 }
     );
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      return NextResponse.json(
+        {
+          success: false,
+          message: "TMDB request failed.",
+          status: response.status,
+          details: text ? text.slice(0, 500) : undefined,
+        },
+        { status: 502 }
+      );
+    }
 
     const data = await response.json();
 
@@ -41,9 +92,13 @@ export async function GET() {
   } catch (error) {
     console.log("TMDB ERROR:", error);
 
-    return NextResponse.json({
-      success: false,
-      message: error.message,
-    });
+    const isAbort = error?.name === "AbortError";
+    return NextResponse.json(
+      {
+        success: false,
+        message: isAbort ? "TMDB request timed out." : error?.message || "TMDB request failed.",
+      },
+      { status: 502 }
+    );
   }
 }

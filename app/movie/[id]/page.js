@@ -86,22 +86,68 @@
 import Image from "next/image";
 
 import { getImagePath } from "@/utils/imagePath";
+import WatchlistButton from "@/components/movie/WatchListButton";
 
-async function getMovie(id) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/movies/${id}`,
-    {
-      cache: "no-store",
+async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(timeoutId);
+      return res;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastError = err;
+
+      const isAbort = err?.name === "AbortError";
+      const isConnReset = err?.cause?.code === "ECONNRESET" || err?.code === "ECONNRESET";
+      const isRetryable = isAbort || isConnReset;
+
+      if (!isRetryable || attempt === retries) break;
+      const backoffMs = 250 * 2 ** attempt;
+      await new Promise((r) => setTimeout(r, backoffMs));
     }
-  );
+  }
 
-  return res.json();
+  throw lastError;
 }
 
-export default async function MoviePage(context) {
-  const params = await context.params;
+async function getMovie(id) {
+  if (!process.env.TMDB_API_KEY) return null;
 
-  const movie = await getMovie(params.id);
+  const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+      accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+  return await res.json().catch(() => null);
+}
+
+export default async function MoviePage({ params }) {
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
+  const movie = id ? await getMovie(id) : null;
+
+  if (!movie) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+        <div className="max-w-xl text-center">
+          <h1 className="text-3xl font-bold">Movie not found</h1>
+          <p className="text-zinc-400 mt-3">
+            We couldn’t load this movie right now. Please refresh and try again.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -160,9 +206,7 @@ export default async function MoviePage(context) {
             </div>
 
             <div className="flex gap-4 mt-8">
-              <button className="bg-red-500 px-6 py-3 rounded-lg font-semibold hover:bg-red-600">
-                + Watchlist
-              </button>
+              <WatchlistButton movieId={movie.id} />
 
               <button className="bg-zinc-800 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-700">
                 ✓ Watched

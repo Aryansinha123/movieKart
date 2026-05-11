@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,11 +24,15 @@ export default function LoginPage() {
 
     const data = await res.json();
 
-    if (data.success) {
-      localStorage.setItem("token", data.token);
+   if (data.success) {
+  localStorage.setItem("token", data.token);
 
-      alert("Login Successful");
-    } else {
+  console.log("TOKEN:", data.token);
+
+  alert("Login Successful");
+
+  window.location.href = "/";
+} else {
       alert(data.message);
     }
   }
@@ -64,9 +71,16 @@ export default function LoginPage() {
           }
         />
 
-        <button className="w-full bg-red-500 hover:bg-red-600 p-3 rounded">
+        <button className="w-full bg-red-500 hover:bg-red-600 p-3 rounded font-medium">
           Login
         </button>
+
+        <p className="text-center text-sm text-zinc-400">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-red-400 hover:text-red-300 transition-colors">
+            Register
+          </Link>
+        </p>
       </form>
     </main>
   );

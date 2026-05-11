@@ -37,6 +37,7 @@ export async function POST(req) {
     const token = jwt.sign(
       {
         id: user._id,
+        username: user.username,
         email: user.email,
       },
       process.env.NEXTAUTH_SECRET,
