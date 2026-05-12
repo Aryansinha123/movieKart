@@ -60,7 +60,11 @@ export async function GET(req, context) {
   try {
     const params = await context.params;
 
-    const id = params.id;
+    const idStr = params.id;
+    const numericId = parseInt(idStr, 10);
+    const isTv = numericId < 0;
+    const realId = isTv ? -numericId : numericId;
+    const path = isTv ? `/tv/${realId}` : `/movie/${realId}`;
 
     if (!process.env.TMDB_API_KEY) {
       return NextResponse.json(
@@ -70,7 +74,7 @@ export async function GET(req, context) {
     }
 
     const response = await fetchWithRetry(
-      `https://api.themoviedb.org/3/movie/${id}`,
+      `https://api.themoviedb.org/3${path}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
@@ -102,7 +106,8 @@ export async function GET(req, context) {
       );
     }
 
-    return NextResponse.json(data);
+    const { mapTmdbResult } = require("@/lib/tmdb");
+    return NextResponse.json(mapTmdbResult({ ...data, media_type: isTv ? "tv" : "movie" }));
   } catch (error) {
     console.log("TMDB ERROR:", error);
 

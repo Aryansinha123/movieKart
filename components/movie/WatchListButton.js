@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "react-hot-toast";
 
 export default function WatchlistButton({ movieId }) {
   async function addToWatchlist() {
@@ -7,7 +8,7 @@ export default function WatchlistButton({ movieId }) {
     console.log("TOKEN:", token);
 
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
 
@@ -27,9 +28,9 @@ export default function WatchlistButton({ movieId }) {
     console.log(data);
 
     if (data.success) {
-      alert("Added to Watchlist");
+      toast.success("Added to Watchlist");
     } else {
-      alert(data.message);
+      toast.error(data.message);
     }
   }
 

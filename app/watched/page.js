@@ -10,6 +10,16 @@ export default function WatchedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [movies, setMovies] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredMovies = useMemo(() => {
+    if (!searchQuery.trim()) return movies;
+    const q = searchQuery.toLowerCase();
+    return movies.filter((m) =>
+      m?.title?.toLowerCase().includes(q) ||
+      m?.overview?.toLowerCase().includes(q)
+    );
+  }, [movies, searchQuery]);
 
   const token = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -108,6 +118,18 @@ export default function WatchedPage() {
           </Link>
         </div>
 
+        {!isLoading && !error && movies.length > 0 && (
+          <div className="mt-6">
+            <input
+              type="text"
+              placeholder="Search your watched movies..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-md p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-lg"
+            />
+          </div>
+        )}
+
         <div className="mt-8">
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -122,13 +144,15 @@ export default function WatchedPage() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
               <p className="text-zinc-200">{error}</p>
             </div>
-          ) : movies.length === 0 ? (
+          ) : filteredMovies.length === 0 ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <p className="text-zinc-300">No watched movies yet.</p>
+              <p className="text-zinc-300">
+                {searchQuery ? `No results for "${searchQuery}"` : "No watched movies yet."}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {movies.map((movie, i) => (
+              {filteredMovies.map((movie, i) => (
                 <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i} className="relative group">
                   <MovieCard
                     movie={movie}

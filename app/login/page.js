@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,11 +30,11 @@ export default function LoginPage() {
 
   console.log("TOKEN:", data.token);
 
-  alert("Login Successful");
+  toast.success("Login Successful");
 
   window.location.href = "/";
 } else {
-      alert(data.message);
+      toast.error(data.message);
     }
   }
 

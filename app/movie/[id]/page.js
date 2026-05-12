@@ -87,6 +87,7 @@ import Image from "next/image";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "@/components/movie/WatchListButton";
+import WatchedButton from "@/components/movie/WatchedButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
 
@@ -119,11 +120,16 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
   throw lastError;
 }
 
-async function getMovie(id) {
+async function getMovie(idStr) {
   if (!process.env.TMDB_API_KEY) return null;
 
   try {
-    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}`, {
+    const numericId = parseInt(idStr, 10);
+    const isTv = numericId < 0;
+    const realId = isTv ? -numericId : numericId;
+    const path = isTv ? `/tv/${realId}` : `/movie/${realId}`;
+
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3${path}`, {
       headers: {
         Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
         accept: "application/json",
@@ -132,18 +138,34 @@ async function getMovie(id) {
     });
 
     if (!res.ok) return null;
-    return await res.json().catch(() => null);
+    const data = await res.json().catch(() => null);
+    if (!data) return null;
+    
+    // Inline mapping logic to support TV shows on this page
+    return {
+      ...data,
+      id: isTv ? -realId : realId,
+      title: data.name || data.title,
+      release_date: data.first_air_date || data.release_date,
+      media_type: isTv ? "tv" : "movie",
+      runtime: isTv ? (data.episode_run_time?.[0] || 0) : data.runtime,
+    };
   } catch (err) {
-    console.error(`Failed to fetch movie ${id}:`, err?.message || err);
+    console.error(`Failed to fetch movie ${idStr}:`, err?.message || err);
     return null;
   }
 }
 
-async function getCredits(id) {
+async function getCredits(idStr) {
   if (!process.env.TMDB_API_KEY) return null;
 
   try {
-    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/credits`, {
+    const numericId = parseInt(idStr, 10);
+    const isTv = numericId < 0;
+    const realId = isTv ? -numericId : numericId;
+    const path = isTv ? `/tv/${realId}/credits` : `/movie/${realId}/credits`;
+
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3${path}`, {
       headers: {
         Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
         accept: "application/json",
@@ -154,16 +176,21 @@ async function getCredits(id) {
     if (!res.ok) return null;
     return await res.json().catch(() => null);
   } catch (err) {
-    console.error(`Failed to fetch credits for ${id}:`, err?.message || err);
+    console.error(`Failed to fetch credits for ${idStr}:`, err?.message || err);
     return null;
   }
 }
 
-async function getWatchProviders(id) {
+async function getWatchProviders(idStr) {
   if (!process.env.TMDB_API_KEY) return null;
 
   try {
-    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/watch/providers`, {
+    const numericId = parseInt(idStr, 10);
+    const isTv = numericId < 0;
+    const realId = isTv ? -numericId : numericId;
+    const path = isTv ? `/tv/${realId}/watch/providers` : `/movie/${realId}/watch/providers`;
+
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3${path}`, {
       headers: {
         Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
         accept: "application/json",
@@ -174,7 +201,7 @@ async function getWatchProviders(id) {
     if (!res.ok) return null;
     return await res.json().catch(() => null);
   } catch (err) {
-    console.error(`Failed to fetch watch providers for ${id}:`, err?.message || err);
+    console.error(`Failed to fetch watch providers for ${idStr}:`, err?.message || err);
     return null;
   }
 }
@@ -310,9 +337,12 @@ export default async function MoviePage({ params }) {
 
               <CollectionPicker movieId={movie.id} />
 
-              <button className="bg-zinc-800 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-700">
+              <WatchedButton
+                movieId={movie.id}
+                className="bg-zinc-800 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-700"
+              >
                 ✓ Watched
-              </button>
+              </WatchedButton>
             </div>
           </div>
         </div>

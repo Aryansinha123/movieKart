@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,10 +27,10 @@ export default function RegisterPage() {
     const data = await res.json();
 
     if (data.success) {
-      alert("Account Created");
+      toast.success("Account Created");
       router.push("/login");
     } else {
-      alert(data.message);
+      toast.error(data.message);
     }
   }
 

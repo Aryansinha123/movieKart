@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -65,11 +66,11 @@ export default function CollectionsPage() {
   async function createCollection() {
     const token = getToken();
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
     if (!name.trim()) {
-      alert("Collection name is required.");
+      toast.error("Collection name is required.");
       return;
     }
 
@@ -89,8 +90,9 @@ export default function CollectionsPage() {
       setName("");
       setIsPublic(false);
       await load();
+      toast.success("Collection created");
     } catch (e) {
-      alert(e?.message || "Failed to create collection.");
+      toast.error(e?.message || "Failed to create collection.");
     } finally {
       setIsSaving(false);
     }
@@ -112,8 +114,9 @@ export default function CollectionsPage() {
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to update collection.");
 
       setCollections((prev) => prev.map((c) => (c._id === data.collection._id ? data.collection : c)));
+      toast.success("Collection updated");
     } catch (e) {
-      alert(e?.message || "Failed to update collection.");
+      toast.error(e?.message || "Failed to update collection.");
     } finally {
       setIsSaving(false);
     }
@@ -136,7 +139,7 @@ export default function CollectionsPage() {
 
   async function saveEdit(collection) {
     if (!editName.trim()) {
-      alert("Name is required");
+      toast.error("Name is required");
       return;
     }
     try {
@@ -157,8 +160,9 @@ export default function CollectionsPage() {
       const updatedColl = { ...data.collection, firstMoviePoster: collection.firstMoviePoster };
       setCollections((prev) => prev.map((c) => (c._id === updatedColl._id ? updatedColl : c)));
       setEditingId(null);
+      toast.success("Collection updated");
     } catch (e) {
-      alert(e?.message || "Failed to update collection.");
+      toast.error(e?.message || "Failed to update collection.");
     } finally {
       setIsSaving(false);
     }
@@ -166,7 +170,7 @@ export default function CollectionsPage() {
 
   async function enableShare(collection) {
     if (!collection.isPublic) {
-      alert("Make the collection public first, then you can share it.");
+      toast.error("Make the collection public first, then you can share it.");
       return;
     }
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -174,9 +178,9 @@ export default function CollectionsPage() {
       const url = `${origin}/collection/share/${collection.shareToken}`;
       try {
         await navigator.clipboard.writeText(url);
-        alert(`Share link copied:\n${url}`);
+        toast.success(`Share link copied!`);
       } catch {
-        alert(url);
+        toast.success(`Share link: ${url}`);
       }
       return;
     }
@@ -196,10 +200,10 @@ export default function CollectionsPage() {
 
       setCollections((prev) => prev.map((x) => (x._id === data.collection._id ? data.collection : x)));
       const url = `${origin}/collection/share/${data.collection.shareToken}`;
-      await navigator.clipboard.writeText(url);
-      alert(`Share link copied:\n${url}`);
+      await navigator.clipboard.writeText(url).catch(() => {});
+      toast.success(`Share link copied!`);
     } catch (e) {
-      alert(e?.message || "Failed.");
+      toast.error(e?.message || "Failed.");
     } finally {
       setIsSaving(false);
     }
@@ -218,8 +222,9 @@ export default function CollectionsPage() {
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to delete collection.");
 
       setCollections((prev) => prev.filter((c) => c._id !== collection._id));
+      toast.success("Collection deleted");
     } catch (e) {
-      alert(e?.message || "Failed to delete collection.");
+      toast.error(e?.message || "Failed to delete collection.");
     } finally {
       setIsSaving(false);
     }

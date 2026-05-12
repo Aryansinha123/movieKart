@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -69,7 +70,7 @@ export default function SettingsPage() {
   function handleFile(file) {
     if (!file) return;
     if (!file.type?.startsWith("image/")) {
-      alert("Please select an image file.");
+      toast.error("Please select an image file.");
       return;
     }
 
@@ -100,6 +101,7 @@ export default function SettingsPage() {
 
       localStorage.setItem("token", data.token);
       setSuccess("Saved!");
+      toast.success("Settings saved!");
     } catch (e) {
       setError(e?.message || "Failed to save changes.");
     } finally {

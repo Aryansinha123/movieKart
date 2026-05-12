@@ -175,7 +175,7 @@ export default async function ProfilePage(context) {
           <div className="lg:col-span-1">
             <h2 className="text-2xl font-bold mb-6">Recent Activity</h2>
             
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900/40">
               {Array.isArray(user.recentActivity) && user.recentActivity.length > 0 ? (
                 user.recentActivity.map((activity) => (
                   <div key={activity._id} className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-800">

@@ -66,8 +66,25 @@ function MovieRow({ movies }) {
 
   const scroll = (direction) => {
     if (scrollRef.current) {
-      const { scrollLeft, clientWidth } = scrollRef.current;
-      const scrollTo = direction === "left" ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      const { scrollLeft, clientWidth, scrollWidth } = scrollRef.current;
+      
+      let scrollTo;
+      if (direction === "left") {
+        // If at the very start, wrap to the end
+        if (scrollLeft <= 10) {
+          scrollTo = scrollWidth;
+        } else {
+          scrollTo = scrollLeft - clientWidth;
+        }
+      } else {
+        // If at the very end, wrap to the start
+        if (scrollLeft + clientWidth >= scrollWidth - 10) {
+          scrollTo = 0;
+        } else {
+          scrollTo = scrollLeft + clientWidth;
+        }
+      }
+      
       scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
     }
   };
@@ -396,7 +413,10 @@ function SimilarUsersSection() {
 }
 
 function UserSimilarityCard({ user, index, isFollowing, onFollow }) {
-  const matchPercent = Math.round((user.similarity?.overall || 0) * 100);
+  const matchPercent =
+    typeof user.compatibilityPercent === "number"
+      ? user.compatibilityPercent
+      : Math.round((user.similarity?.overall || 0) * 100);
 
   return (
     <motion.div
@@ -440,6 +460,11 @@ function UserSimilarityCard({ user, index, isFollowing, onFollow }) {
           <p className="text-xs text-zinc-500 mt-0.5 truncate">
             {user.bio || `${user.watchedCount} movies watched`}
           </p>
+          {Array.isArray(user.sharedGenres) && user.sharedGenres.length > 0 ? (
+            <p className="text-[11px] text-zinc-500 mt-1 truncate">
+              Shared genres: {user.sharedGenres.slice(0, 3).join(", ")}
+            </p>
+          ) : null}
 
           {/* Similarity breakdown */}
           <div className="mt-2 flex gap-2">

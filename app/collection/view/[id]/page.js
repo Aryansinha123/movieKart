@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -124,7 +125,7 @@ function CollectionComments({ collectionMongoId }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!token) return alert("Sign in to comment.");
+    if (!token) return toast.error("Sign in to comment.");
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: {
@@ -141,7 +142,8 @@ function CollectionComments({ collectionMongoId }) {
     if (j.success) {
       setBody("");
       load();
-    } else alert(j.message || "Failed");
+      toast.success("Comment posted");
+    } else toast.error(j.message || "Failed");
   }
 
   return (

@@ -39,7 +39,7 @@ export default function SearchBar() {
         </div>
         <input
           type="text"
-          placeholder="Search for movies..."
+          placeholder="Search for movies or TV shows..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-4 rounded-xl bg-zinc-900/80 border border-zinc-800 text-white outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/10 transition-all shadow-lg backdrop-blur-sm"

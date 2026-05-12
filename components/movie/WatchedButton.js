@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
-export default function WatchedButton({ movieId, onSuccess }) {
+export default function WatchedButton({ movieId, onSuccess, className, children }) {
   const [isSaving, setIsSaving] = useState(false);
 
   async function markWatched(e) {
@@ -11,7 +12,7 @@ export default function WatchedButton({ movieId, onSuccess }) {
 
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
 
@@ -32,8 +33,9 @@ export default function WatchedButton({ movieId, onSuccess }) {
       }
 
       onSuccess?.();
+      toast.success("Added to watched movies!");
     } catch (err) {
-      alert(err?.message || "Failed to mark as watched.");
+      toast.error(err?.message || "Failed to mark as watched.");
     } finally {
       setIsSaving(false);
     }
@@ -44,9 +46,9 @@ export default function WatchedButton({ movieId, onSuccess }) {
       type="button"
       onClick={markWatched}
       disabled={isSaving}
-      className="w-full mt-3 bg-emerald-600/90 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+      className={className || "w-full mt-3 bg-emerald-600/90 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-sm font-semibold transition-colors"}
     >
-      {isSaving ? "Saving..." : "Watched"}
+      {isSaving ? "Saving..." : (children || "Watched")}
     </button>
   );
 }

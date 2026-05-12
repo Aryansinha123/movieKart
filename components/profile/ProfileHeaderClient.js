@@ -27,6 +27,8 @@ export default function ProfileHeaderClient({ user }) {
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [tasteMatch, setTasteMatch] = useState(null);
+  const [sharedGenres, setSharedGenres] = useState([]);
 
   const isSelf =
     viewer?.id &&
@@ -40,11 +42,23 @@ export default function ProfileHeaderClient({ user }) {
         return;
       }
       try {
-        const res = await fetch(`/api/follow?targetUserId=${user._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => null);
-        if (res.ok && data?.success) setFollowing(Boolean(data.following));
+        const [followRes, tasteRes] = await Promise.all([
+          fetch(`/api/follow?targetUserId=${user._id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/taste-match?username=${encodeURIComponent(user.username)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const followData = await followRes.json().catch(() => null);
+        if (followRes.ok && followData?.success) setFollowing(Boolean(followData.following));
+
+        const tasteData = await tasteRes.json().catch(() => null);
+        if (tasteRes.ok && tasteData?.success) {
+          setTasteMatch(tasteData.compatibilityPercent ?? null);
+          setSharedGenres(tasteData.sharedGenreNames || []);
+        }
       } finally {
         setLoading(false);
       }
@@ -101,6 +115,19 @@ export default function ProfileHeaderClient({ user }) {
       <div className="flex-1">
         <h1 className="text-5xl font-bold text-white">{user.username}</h1>
         <p className="text-zinc-400 mt-3 text-lg">{user.bio}</p>
+        {!isSelf && tasteMatch !== null ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-4 py-1.5">
+            <span className="text-xs font-semibold tracking-wide text-emerald-300 uppercase">
+              Taste Match
+            </span>
+            <span className="text-lg font-bold text-white">{tasteMatch}%</span>
+          </div>
+        ) : null}
+        {!isSelf && sharedGenres.length > 0 ? (
+          <p className="text-xs text-zinc-500 mt-2">
+            Shared taste: {sharedGenres.slice(0, 3).join(", ")}
+          </p>
+        ) : null}
 
         <div className="flex gap-8 mt-5 text-zinc-300 font-medium">
           <div className="flex flex-col items-center">

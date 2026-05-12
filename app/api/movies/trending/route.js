@@ -62,7 +62,7 @@ export async function GET() {
     }
 
     const response = await fetchWithRetry(
-      "https://api.themoviedb.org/3/trending/movie/week",
+      "https://api.themoviedb.org/3/trending/all/week",
       {
         headers: {
           Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
@@ -87,6 +87,11 @@ export async function GET() {
     }
 
     const data = await response.json();
+
+    const { mapTmdbResult } = require("@/lib/tmdb");
+    if (data.results) {
+      data.results = data.results.map(mapTmdbResult).filter(Boolean);
+    }
 
     return NextResponse.json(data);
   } catch (error) {

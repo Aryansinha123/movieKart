@@ -11,7 +11,7 @@ export async function GET(req) {
     }
 
     const response = await fetch(
-      `https://api.themoviedb.org/3/search/movie?query=${query}`,
+      `https://api.themoviedb.org/3/search/multi?query=${query}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
@@ -22,6 +22,11 @@ export async function GET(req) {
     );
 
     const data = await response.json();
+
+    const { mapTmdbResult } = require("@/lib/tmdb");
+    if (data.results) {
+      data.results = data.results.map(mapTmdbResult).filter(Boolean);
+    }
 
     return NextResponse.json(data.results);
   } catch (error) {
