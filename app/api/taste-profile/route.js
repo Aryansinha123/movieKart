@@ -38,6 +38,7 @@ export async function GET(req) {
     } else {
       const userData = getUserFromToken(req);
       if (!userData) {
+        // Just return 401 without logging a big error for unauthenticated calls
         return NextResponse.json(
           { success: false, message: "Unauthorized" },
           { status: 401 }

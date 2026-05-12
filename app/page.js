@@ -695,7 +695,7 @@ export default function Home() {
 
   const fetchRecommendations = useCallback(async () => {
     const token = getToken();
-    if (!token) {
+    if (!token || token === "null" || token === "undefined") {
       setLoading(false);
       return;
     }
@@ -717,7 +717,7 @@ export default function Home() {
 
   const fetchTasteProfile = useCallback(async () => {
     const token = getToken();
-    if (!token) return;
+    if (!token || token === "null" || token === "undefined") return;
     try {
       const res = await fetch("/api/taste-profile", {
         headers: { Authorization: `Bearer ${token}` },
