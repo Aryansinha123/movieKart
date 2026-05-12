@@ -41,8 +41,9 @@ import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
 
 export default function MovieCard({ movie, priority = false }) {
-  const { watchedIds } = useUserMovies() || { watchedIds: new Set() };
+  const { watchedIds, watchlistIds } = useUserMovies() || { watchedIds: new Set(), watchlistIds: new Set() };
   const isWatched = watchedIds.has(Number(movie.id));
+  const isWatchlist = watchlistIds.has(Number(movie.id));
 
   return (
     <div className="group relative w-full rounded-xl overflow-hidden border border-zinc-800/50 bg-zinc-900/30 transition-all duration-300 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1">

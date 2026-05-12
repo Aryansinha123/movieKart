@@ -63,4 +63,4 @@ Built using:
 
 Still a lot more to build, but excited about how MovieKart is evolving into a complete cinematic discovery ecosystem 🚀
 
-#NextJS #ReactJS #WebDevelopment #AI #MachineLearning #FullStackDevelopment #MongoDB #RecommendationSystem #SoftwareEngineering #OpenToWork #PortfolioProject #MovieKart #Innovation
+#NextJS #ReactJS #WebDevelopment #AI #MachineLearning #FullStackDevelopment #MongoDB #RecommendationSystem #SoftwareEngineering #OpenToWork #PortfolioProject #MovieKart #Innovatio
