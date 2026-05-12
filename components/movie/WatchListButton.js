@@ -1,12 +1,12 @@
 "use client";
 import { toast } from "react-hot-toast";
 
-export default function WatchlistButton({ movieId }) {
-  async function addToWatchlist() {
+export default function WatchlistButton({ movieId, className, children }) {
+  async function addToWatchlist(e) {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
     const token = localStorage.getItem("token");
-
-    console.log("TOKEN:", token);
-
     if (!token) {
       toast.error("Please login first");
       return;
@@ -25,10 +25,9 @@ export default function WatchlistButton({ movieId }) {
 
     const data = await res.json();
 
-    console.log(data);
-
     if (data.success) {
       toast.success("Added to Watchlist");
+      window.dispatchEvent(new Event("user-stats-update"));
     } else {
       toast.error(data.message);
     }
@@ -37,9 +36,9 @@ export default function WatchlistButton({ movieId }) {
   return (
     <button
       onClick={addToWatchlist}
-      className="bg-red-500 px-6 py-3 rounded-lg font-semibold hover:bg-red-600"
+      className={className || "bg-red-500 px-6 py-3 rounded-lg font-semibold hover:bg-red-600"}
     >
-      + Watchlist
+      {children || "+ Watchlist"}
     </button>
   );
 }

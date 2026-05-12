@@ -7,6 +7,7 @@ import User from "@/models/User";
 import Review from "@/models/Review";
 import Collection from "@/models/Collection";
 import Activity from "@/models/Activity";
+import UserAchievement from "@/models/UserAchievement";
 import {
   becauseYouWatched,
   recommendedForYou,
@@ -16,6 +17,7 @@ import {
   rankMoviesFromPeerReviews,
   getCuratedCollections,
 } from "@/lib/recommendations";
+import { recommendedGenreBoostFromBadges } from "@/lib/achievements";
 
 /**
  * GET /api/recommendations
@@ -72,7 +74,10 @@ export async function GET(req) {
     const movieDetails = (await Promise.all(movieDetailPromises)).filter(Boolean);
 
     const tasteProfile = analyzeTasteProfile(movieDetails, reviews);
+    const badgeDoc = await UserAchievement.findOne({ userId: userData.id }).lean();
     const favoriteGenreIds = tasteProfile.favoriteGenres.map((g) => g.id);
+    const badgeGenreBoost = recommendedGenreBoostFromBadges(badgeDoc?.unlockedKeys || []);
+    const adaptiveGenreIds = [...new Set([...favoriteGenreIds, ...badgeGenreBoost])];
 
     const followingIds = (user.following || []).map(
       (id) => new mongoose.Types.ObjectId(id.toString())
@@ -109,7 +114,7 @@ export async function GET(req) {
       ) {
         result.recommended = await recommendedForYou(
           watchedMovieIds,
-          favoriteGenreIds,
+          adaptiveGenreIds,
           excludeIds,
           {
             highlyRatedMovieIds,

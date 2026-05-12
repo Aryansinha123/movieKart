@@ -39,7 +39,7 @@ export default function SearchBar() {
         </div>
         <input
           type="text"
-          placeholder="Search for movies or TV shows..."
+          placeholder="Search movies, shows, actors, or character names..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-4 rounded-xl bg-zinc-900/80 border border-zinc-800 text-white outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/10 transition-all shadow-lg backdrop-blur-sm"
@@ -48,9 +48,9 @@ export default function SearchBar() {
 
       {movies.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-10">
-          {movies.map((movie) => (
+          {movies.map((movie, idx) => (
             <MovieCard
-              key={movie.id}
+              key={`${movie.id}-${idx}`}
               movie={movie}
             />
           ))}

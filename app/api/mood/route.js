@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchMovies, mapTmdbResult } from "@/lib/tmdb";
+import { searchMovies, mapTmdbResult, tmdbRequest } from "@/lib/tmdb";
 import {
   analyzePromptForMoods,
   getDiscoverParamsForMoods,
@@ -7,40 +7,62 @@ import {
   MOODS,
 } from "@/lib/mood";
 
-const TMDB_BASE = "https://api.themoviedb.org/3";
-const TMDB_KEY = process.env.TMDB_API_KEY;
-
-function isV4Token(value) {
-  return typeof value === "string" && value.includes(".") && value.length > 50;
-}
-
-async function tmdbFetch(path) {
-  if (!TMDB_KEY) throw new Error("TMDB_API_KEY is missing");
-  if (isV4Token(TMDB_KEY)) {
-    return fetch(`${TMDB_BASE}${path}`, {
-      headers: {
-        Authorization: `Bearer ${TMDB_KEY}`,
-        accept: "application/json",
-      },
-      cache: "no-store",
-    });
-  }
-  const joiner = path.includes("?") ? "&" : "?";
-  return fetch(`${TMDB_BASE}${path}${joiner}api_key=${TMDB_KEY}`, { cache: "no-store" });
-}
-
 function normalizeId(item) {
   return `${item.media_type || "movie"}:${item.id}`;
 }
 
-function scoreMoodCandidate(item, plan, matchedMoods) {
+const LANGUAGE_PRESETS = {
+  any: null,
+  english: "en",
+  hindi: "hi",
+  korean: "ko",
+  japanese: "ja",
+  spanish: "es",
+  french: "fr",
+  tamil: "ta",
+  telugu: "te",
+};
+
+function extractQueryKeywords(prompt) {
+  const stop = new Set([
+    "the","a","an","and","or","for","to","of","in","on","with","based","similar","like","movies","movie","films","film","show","series","want","need","about","from","your","my","me","is","are","it"
+  ]);
+  return String(prompt || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3 && !stop.has(t))
+    .slice(0, 10);
+}
+
+function keywordMatchScore(item, keywords) {
+  if (!keywords?.length) return 0;
+  const text = `${item.title || ""} ${(item.overview || "")}`.toLowerCase();
+  let score = 0;
+  let hits = 0;
+  for (const kw of keywords) {
+    if (text.includes(kw)) {
+      hits += 1;
+      score += 1.2;
+      if ((item.title || "").toLowerCase().includes(kw)) score += 0.8;
+    }
+  }
+  return score + (hits >= 2 ? 1 : 0);
+}
+
+function scoreMoodCandidate(item, plan, matchedMoods, keywords = []) {
   let score = 0;
   const title = (item.title || "").toLowerCase();
   const overview = (item.overview || "").toLowerCase();
 
-  score += (item.vote_average || 0) * 0.8;
-  score += Math.min((item.popularity || 0) / 80, 2.2);
-  score += Math.min((item.vote_count || 0) / 2000, 1.2);
+  // Balanced weighting so one signal (e.g., popularity / Hollywood bias) doesn't dominate.
+  const qualityScore = (item.vote_average || 0) / 10; // 0..1
+  const popularityScore = Math.min((item.popularity || 0) / 100, 1); // 0..1
+  const confidenceScore = Math.min((item.vote_count || 0) / 1500, 1); // 0..1
+  score += qualityScore * 1.2;
+  score += popularityScore * 0.6;
+  score += confidenceScore * 0.6;
   if (item.poster_path) score += 0.5;
   if (item.backdrop_path) score += 0.4;
 
@@ -64,6 +86,8 @@ function scoreMoodCandidate(item, plan, matchedMoods) {
   if (plan.preferMovies && item.media_type !== "tv") score += 0.35;
   if (plan.includeTV && item.media_type === "tv") score += 0.35;
 
+  score += keywordMatchScore(item, keywords) * 1.15;
+
   const releaseYear = Number((item.release_date || "").slice(0, 4));
   if (Number.isFinite(releaseYear)) {
     if (plan.yearRange && releaseYear >= plan.yearRange.from && releaseYear <= plan.yearRange.to) score += 1.4;
@@ -74,13 +98,44 @@ function scoreMoodCandidate(item, plan, matchedMoods) {
   return score;
 }
 
+function diversifyByLanguage(items, perLangCap = 6) {
+  const bucket = new Map();
+  for (const item of items) {
+    const lang = item.original_language || "unknown";
+    if (!bucket.has(lang)) bucket.set(lang, []);
+    bucket.get(lang).push(item);
+  }
+  const languages = [...bucket.keys()].sort((a, b) => (bucket.get(b).length - bucket.get(a).length));
+  const result = [];
+  let added = true;
+  for (let round = 0; round < perLangCap && added; round++) {
+    added = false;
+    for (const lang of languages) {
+      const arr = bucket.get(lang);
+      if (arr[round]) {
+        result.push(arr[round]);
+        added = true;
+      }
+    }
+  }
+  const used = new Set(result.map((x) => normalizeId(x)));
+  for (const item of items) {
+    const key = normalizeId(item);
+    if (!used.has(key)) result.push(item);
+  }
+  return result;
+}
+
 async function discoverByMoodPlan(plan, moodName, page = 1) {
   const params = getDiscoverParamsForMoods([moodName]);
+  const isNonEnglish = plan.language && plan.language !== "en";
+  const minVotes = isNonEnglish ? 30 : (params.vote_count_gte || 120);
+
   const filters = [
     `with_genres=${encodeURIComponent(params.with_genres)}`,
     "include_adult=false",
     "sort_by=vote_average.desc",
-    `vote_count.gte=${params.vote_count_gte || 120}`,
+    `vote_count.gte=${minVotes}`,
     `page=${page}`,
   ];
   if (plan.language) filters.push(`with_original_language=${plan.language}`);
@@ -96,8 +151,8 @@ async function discoverByMoodPlan(plan, moodName, page = 1) {
   const tvPath = `/discover/tv?${filters.join("&")}`;
 
   const [movieRes, tvRes] = await Promise.all([
-    tmdbFetch(moviePath),
-    plan.includeTV ? tmdbFetch(tvPath) : Promise.resolve(null),
+    tmdbRequest(moviePath),
+    plan.includeTV ? tmdbRequest(tvPath) : Promise.resolve(null),
   ]);
 
   const movieData = movieRes.ok ? await movieRes.json() : { results: [] };
@@ -111,11 +166,18 @@ async function discoverByMoodPlan(plan, moodName, page = 1) {
 
 export async function POST(req) {
   try {
-    const { prompt, mood } = await req.json();
+    const { prompt, mood, language = "any", origin = "any" } = await req.json();
+    const explicitLanguage = LANGUAGE_PRESETS[String(language).toLowerCase()] || null;
+    const explicitOrigin = LANGUAGE_PRESETS[String(origin).toLowerCase()] || null;
+    const forcedLanguage = explicitLanguage || explicitOrigin;
 
     if (prompt) {
       const plan = parseAdvancedMoodPrompt(prompt);
+      if (forcedLanguage) {
+        plan.language = forcedLanguage;
+      }
       const matchedMoods = plan.matchedMoods.length ? plan.matchedMoods : analyzePromptForMoods(prompt);
+      const queryKeywords = extractQueryKeywords(prompt);
       const primaryMood = matchedMoods[0] || "Atmospheric";
       const secondaryMood = matchedMoods[1] || null;
 
@@ -136,7 +198,7 @@ export async function POST(req) {
           const path = isTv
             ? `/tv/${realId}/recommendations?page=1`
             : `/movie/${realId}/recommendations?page=1`;
-          const recRes = await tmdbFetch(path);
+          const recRes = await tmdbRequest(path);
           const recData = recRes.ok ? await recRes.json() : { results: [] };
           anchorRelated = (recData.results || []).map((m) =>
             mapTmdbResult({ ...m, media_type: isTv ? "tv" : "movie" })
@@ -161,26 +223,47 @@ export async function POST(req) {
         deduped.push(item);
       }
 
-      const ranked = deduped
-        .map((item) => ({ ...item, _moodScore: scoreMoodCandidate(item, plan, matchedMoods) }))
+      const scored = deduped
+        .map((item) => ({
+          ...item,
+          _keywordScore: keywordMatchScore(item, queryKeywords),
+          _moodScore: scoreMoodCandidate(item, plan, matchedMoods, queryKeywords),
+        }));
+
+      // Keep relevance tied to user's keywords when they provided meaningful terms.
+      const keywordFiltered =
+        queryKeywords.length > 0
+          ? scored.filter((x) => x._keywordScore > 0 || (x.title || "").toLowerCase().includes((plan.anchorTitle || "").toLowerCase()))
+          : scored;
+
+      const ranked = (keywordFiltered.length >= 10 ? keywordFiltered : scored)
         .sort((a, b) => b._moodScore - a._moodScore)
-        .slice(0, 30)
-        .map(({ _moodScore, ...rest }) => rest);
+        .slice(0, 60)
+        .map(({ _moodScore, _keywordScore, ...rest }) => rest);
+
+      const finalMovies = forcedLanguage
+        ? ranked.filter((x) => x.original_language === forcedLanguage).slice(0, 30)
+        : diversifyByLanguage(ranked, 6).slice(0, 30);
 
       return NextResponse.json({
         success: true,
         matchedMoods,
-        movies: ranked,
+        movies: finalMovies,
         message: `Found advanced mood matches for: ${matchedMoods.join(", ")}.`,
         debug: {
           primaryMood,
           secondaryMood,
-          language: plan.language,
+          language: plan.language || "mixed",
           hasAnchor: !!plan.anchorTitle,
+          keywordCount: queryKeywords.length,
+          diversified: !forcedLanguage,
         },
       });
     } else if (mood) {
       const plan = parseAdvancedMoodPrompt(mood);
+      if (forcedLanguage) {
+        plan.language = forcedLanguage;
+      }
       const discoverResults = [
         ...(await discoverByMoodPlan({ ...plan, includeTV: true, preferMovies: true }, mood, 1)),
         ...(await discoverByMoodPlan({ ...plan, includeTV: true, preferMovies: true }, mood, 2)),
@@ -188,13 +271,16 @@ export async function POST(req) {
       const ranked = discoverResults
         .map((item) => ({ ...item, _moodScore: scoreMoodCandidate(item, plan, [mood]) }))
         .sort((a, b) => b._moodScore - a._moodScore)
-        .slice(0, 30)
+        .slice(0, 60)
         .map(({ _moodScore, ...rest }) => rest);
+      const finalMovies = forcedLanguage
+        ? ranked.filter((x) => x.original_language === forcedLanguage).slice(0, 30)
+        : diversifyByLanguage(ranked, 6).slice(0, 30);
 
       return NextResponse.json({
         success: true,
         mood,
-        movies: ranked,
+        movies: finalMovies,
         message: `Advanced ${mood} picks`,
       });
     }

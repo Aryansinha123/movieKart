@@ -130,19 +130,31 @@ export default function SettingsPage() {
           ) : (
             <>
               <div className="flex items-center gap-6">
-                <div className="w-20 h-20 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center">
-                  {avatar ? (
-                    <Image
-                      src={avatar}
-                      alt="Avatar"
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xl font-bold text-zinc-200">
-                      {(username || userFromToken?.username || "U").charAt(0).toUpperCase()}
-                    </span>
+                <div className="relative group/avatar">
+                  <div className="w-20 h-20 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center border-2 border-zinc-800 group-hover/avatar:border-red-500/50 transition-colors">
+                    {avatar ? (
+                      <Image
+                        src={avatar}
+                        alt="Avatar"
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xl font-bold text-zinc-200">
+                        {(username || userFromToken?.username || "U").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  {avatar && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatar("")}
+                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                      title="Remove Avatar"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
                   )}
                 </div>
 
@@ -152,16 +164,16 @@ export default function SettingsPage() {
                     <input
                       type="file"
                       accept="image/*"
+                      id="avatar-upload"
                       onChange={(e) => handleFile(e.target.files?.[0])}
-                      className="text-sm text-zinc-300"
+                      className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setAvatar("")}
-                      className="text-sm text-zinc-400 hover:text-white transition-colors"
+                    <label
+                      htmlFor="avatar-upload"
+                      className="cursor-pointer text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg font-semibold transition-colors"
                     >
-                      Remove
-                    </button>
+                      Upload New
+                    </label>
                   </div>
                   <p className="text-xs text-zinc-500 mt-2">
                     Tip: use a small image (under ~300KB) for best performance.

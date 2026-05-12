@@ -11,6 +11,8 @@ export default function MoodDiscoverySection() {
   const [results, setResults] = useState(null);
   const [moodCategories, setMoodCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [languageFilter, setLanguageFilter] = useState("any");
+  const [originFilter, setOriginFilter] = useState("any");
 
   useEffect(() => {
     // Fetch available mood categories
@@ -35,7 +37,7 @@ export default function MoodDiscoverySection() {
       const res = await fetch("/api/mood", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, language: languageFilter, origin: originFilter }),
       });
       const data = await res.json();
       if (data.success) {
@@ -58,7 +60,7 @@ export default function MoodDiscoverySection() {
       const res = await fetch("/api/mood", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mood: moodName }),
+        body: JSON.stringify({ mood: moodName, language: languageFilter, origin: originFilter }),
       });
       const data = await res.json();
       if (data.success) {
@@ -74,6 +76,18 @@ export default function MoodDiscoverySection() {
       setIsSearching(false);
     }
   };
+
+  // Re-trigger search when filters change
+  useEffect(() => {
+    if (results && !isSearching) {
+      if (activeCategory) {
+        loadCategory(activeCategory);
+      } else if (prompt.trim()) {
+        handleSearch({ preventDefault: () => {} });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [languageFilter, originFilter]);
 
   return (
     <div className="space-y-10">
@@ -93,6 +107,35 @@ export default function MoodDiscoverySection() {
 
       {/* Search Bar */}
       <div className="max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <select
+            value={languageFilter}
+            onChange={(e) => setLanguageFilter(e.target.value)}
+            className="rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-zinc-200 outline-none"
+          >
+            <option value="any">Language: Any (balanced mix)</option>
+            <option value="english">English</option>
+            <option value="hindi">Hindi</option>
+            <option value="korean">Korean</option>
+            <option value="japanese">Japanese</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
+            <option value="tamil">Tamil</option>
+            <option value="telugu">Telugu</option>
+          </select>
+          <select
+            value={originFilter}
+            onChange={(e) => setOriginFilter(e.target.value)}
+            className="rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-zinc-200 outline-none"
+          >
+            <option value="any">Origin preset: Any</option>
+            <option value="hindi">India-focused</option>
+            <option value="english">Hollywood/English</option>
+            <option value="korean">Korean</option>
+            <option value="japanese">Japanese</option>
+            <option value="spanish">Spanish/LatAm</option>
+          </select>
+        </div>
         <form onSubmit={handleSearch} className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
           <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-2xl p-2 shadow-2xl">
@@ -102,7 +145,19 @@ export default function MoodDiscoverySection() {
             <input
               type="text"
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setPrompt(val);
+                // Auto-detect language from prompt to sync dropdown
+                const lower = val.toLowerCase();
+                if (lower.includes("hindi") || lower.includes("bollywood")) setLanguageFilter("hindi");
+                if (lower.includes("korean") || lower.includes("k-drama")) setLanguageFilter("korean");
+                if (lower.includes("japanese") || lower.includes("anime")) setLanguageFilter("japanese");
+                if (lower.includes("spanish")) setLanguageFilter("spanish");
+                if (lower.includes("french")) setLanguageFilter("french");
+                if (lower.includes("tamil")) setLanguageFilter("tamil");
+                if (lower.includes("telugu")) setLanguageFilter("telugu");
+              }}
               placeholder="e.g., movies for lonely nights, epic space operas, uplifting comfort..."
               className="w-full bg-transparent border-none outline-none text-white text-lg py-3 placeholder:text-zinc-600"
             />

@@ -5,6 +5,8 @@ import User from "@/models/User";
 import Collection from "@/models/Collection";
 import Review from "@/models/Review";
 import Activity from "@/models/Activity";
+import UserAchievement from "@/models/UserAchievement";
+import { badgeMeta } from "@/lib/achievements";
 
 export async function GET(req, context) {
   try {
@@ -42,11 +44,23 @@ export async function GET(req, context) {
       .limit(20)
       .lean();
 
+    const achievementDoc = await UserAchievement.findOne({ userId: user._id }).lean();
+    const unlockedKeys = achievementDoc?.unlockedKeys || [];
+    const featuredKeys = achievementDoc?.featuredKeys || unlockedKeys.slice(0, 6);
+    const badges = badgeMeta(unlockedKeys);
+    const featuredBadges = badgeMeta(featuredKeys);
+
     return NextResponse.json({
       ...user.toObject(),
       publicCollections,
       recentReviews,
       recentActivity,
+      achievements: {
+        unlockedCount: unlockedKeys.length,
+        featuredKeys,
+        featuredBadges,
+        badges,
+      },
     });
   } catch (error) {
     return NextResponse.json({

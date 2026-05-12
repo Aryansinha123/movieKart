@@ -5,21 +5,17 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 
 import MovieCard from "@/components/movie/MovieCard";
+import SmartFilter from "@/components/movie/SmartFilter";
 
 export default function WatchedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [movies, setMovies] = useState([]);
+  const [filteredMovies, setFilteredMovies] = useState([]);
+  const [sortBy, setSortBy] = useState("added");
+
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredMovies = useMemo(() => {
-    if (!searchQuery.trim()) return movies;
-    const q = searchQuery.toLowerCase();
-    return movies.filter((m) =>
-      m?.title?.toLowerCase().includes(q) ||
-      m?.overview?.toLowerCase().includes(q)
-    );
-  }, [movies, searchQuery]);
 
   const token = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -100,6 +96,34 @@ export default function WatchedPage() {
     }
   }
 
+  const sortedMovies = useMemo(() => {
+    const list = [...filteredMovies];
+    if (sortBy === "added") return list;
+
+    return list.sort((a, b) => {
+      if (sortBy === "title") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+      if (sortBy === "language") {
+        return (a.original_language || "").localeCompare(b.original_language || "");
+      }
+      if (sortBy === "country") {
+        const ca =
+          a.origin_country?.[0] || a.production_countries?.[0]?.iso_3166_1 || "??";
+        const cb =
+          b.origin_country?.[0] || b.production_countries?.[0]?.iso_3166_1 || "??";
+        return ca.localeCompare(cb);
+      }
+      if (sortBy === "release") {
+        return new Date(b.release_date || 0) - new Date(a.release_date || 0);
+      }
+      if (sortBy === "rating") {
+        return (b.vote_average || 0) - (a.vote_average || 0);
+      }
+      return 0;
+    });
+  }, [filteredMovies, sortBy]);
+
   return (
     <main className="min-h-screen bg-black text-white px-8 py-10">
       <div className="max-w-6xl mx-auto">
@@ -119,14 +143,26 @@ export default function WatchedPage() {
         </div>
 
         {!isLoading && !error && movies.length > 0 && (
-          <div className="mt-6">
-            <input
-              type="text"
-              placeholder="Search your watched movies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full max-w-md p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-lg"
-            />
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[300px]">
+              <SmartFilter items={movies} onFilter={setFilteredMovies} />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-sm rounded-lg px-3 py-2 outline-none focus:border-emerald-500/50 transition-colors cursor-pointer"
+              >
+                <option value="added">Recently Added</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="language">Language</option>
+                <option value="country">Country</option>
+                <option value="release">Release Date</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
           </div>
         )}
 
@@ -147,12 +183,12 @@ export default function WatchedPage() {
           ) : filteredMovies.length === 0 ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
               <p className="text-zinc-300">
-                {searchQuery ? `No results for "${searchQuery}"` : "No watched movies yet."}
+                {movies.length > 0 ? "No items match your smart filter." : "No watched movies yet."}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {filteredMovies.map((movie, i) => (
+              {sortedMovies.map((movie, i) => (
                 <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i} className="relative group">
                   <MovieCard
                     movie={movie}

@@ -18,6 +18,8 @@ export const metadata = {
   description: "Your personalized movie discovery platform. Get AI recommendations, taste analysis, and connect with users who share your cinematic taste.",
 };
 
+import { UserProvider } from "@/components/providers/UserProvider";
+
 export default function RootLayout({ children }) {
   return (
     <html
@@ -25,9 +27,11 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Navbar />
-        {children}
-        <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+        <UserProvider>
+          <Navbar />
+          {children}
+          <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+        </UserProvider>
       </body>
     </html>
   );

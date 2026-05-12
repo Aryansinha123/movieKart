@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchMovieDetails } from "@/lib/tmdb";
 import ProfileHeaderClient from "@/components/profile/ProfileHeaderClient";
+import { FolderHeart, Clapperboard, Calendar, Star, Eye, History, Bookmark } from "lucide-react";
 
 async function getProfile(username) {
   const res = await fetch(
@@ -22,6 +23,22 @@ async function getMoviesDetails(movieIds) {
   return results.filter(Boolean);
 }
 
+async function getCollectionThumbs(collections) {
+  const thumbMap = {};
+  const promises = collections.map(async (c) => {
+    if (c.imageUrl) {
+      thumbMap[c._id] = c.imageUrl;
+    } else if (c.movies && c.movies.length > 0) {
+      const details = await fetchMovieDetails(c.movies[0]);
+      if (details?.poster_path) {
+        thumbMap[c._id] = `https://image.tmdb.org/t/p/w300${details.poster_path}`;
+      }
+    }
+  });
+  await Promise.all(promises);
+  return thumbMap;
+}
+
 export default async function ProfilePage(context) {
   const params = await context.params;
   const user = await getProfile(params.username);
@@ -36,6 +53,7 @@ export default async function ProfilePage(context) {
 
   const watchedMoviesDetails = await getMoviesDetails(user.watchedMovies);
   const watchlistDetails = await getMoviesDetails(user.watchlist);
+  const collectionThumbs = await getCollectionThumbs(user.publicCollections || []);
 
   return (
     <main className="min-h-screen bg-black text-white p-10">
@@ -50,9 +68,12 @@ export default async function ProfilePage(context) {
             
             {/* Watched Movies */}
             <div>
-              <div className="flex justify-between items-end mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                  <History size={20} />
+                </div>
                 <h2 className="text-2xl font-bold">Recently Watched</h2>
-                <span className="text-zinc-500 text-sm">Latest 10</span>
+                <span className="text-zinc-500 text-sm ml-auto">Latest 10</span>
               </div>
               {watchedMoviesDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
@@ -86,9 +107,12 @@ export default async function ProfilePage(context) {
 
             {/* Watchlist */}
             <div>
-              <div className="flex justify-between items-end mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                  <Bookmark size={20} />
+                </div>
                 <h2 className="text-2xl font-bold">Watchlist</h2>
-                <span className="text-zinc-500 text-sm">Latest 10</span>
+                <span className="text-zinc-500 text-sm ml-auto">Latest 10</span>
               </div>
               {watchlistDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
@@ -122,44 +146,54 @@ export default async function ProfilePage(context) {
 
             {/* Public collections */}
             <div>
-              <h2 className="text-2xl font-bold mb-6">Collections</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-red-500/10 text-red-500">
+                  <FolderHeart size={20} />
+                </div>
+                <h2 className="text-2xl font-bold">Collections</h2>
+              </div>
+              
               {Array.isArray(user.publicCollections) && user.publicCollections.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {user.publicCollections.map((c) => (
-                    <div
+                    <Link
                       key={c._id}
-                      className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 hover:bg-zinc-800/50 transition-colors"
+                      href={`/collection/view/${c._id}`}
+                      className="group relative flex flex-col rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 hover:border-red-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/5"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-lg font-bold truncate">{c.name}</p>
-                          <p className="text-sm text-zinc-400 mt-1">
-                            {c.movies?.length || 0} movies
-                          </p>
+                      {/* Card Thumbnail */}
+                      <div className="relative h-40 overflow-hidden">
+                        {collectionThumbs[c._id] ? (
+                          <Image
+                            src={collectionThumbs[c._id]}
+                            alt={c.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-60"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                            <FolderHeart size={40} className="text-zinc-700" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+                        
+                        <div className="absolute bottom-4 left-5">
+                          <h3 className="text-xl font-bold text-white group-hover:text-red-400 transition-colors">
+                            {c.name}
+                          </h3>
                         </div>
                       </div>
 
-                      {Array.isArray(c.movies) && c.movies.length > 0 ? (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {c.movies.slice(0, 5).map((id) => (
-                            <Link
-                              key={id}
-                              href={`/movie/${id}`}
-                              className="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors"
-                            >
-                              Movie #{id}
-                            </Link>
-                          ))}
-                          {c.movies.length > 5 ? (
-                            <span className="text-xs text-zinc-500 px-2 py-1">
-                              +{c.movies.length - 5}
-                            </span>
-                          ) : null}
+                      <div className="p-5 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-zinc-400">
+                          <Clapperboard size={14} />
+                          <span className="text-sm">{c.movies?.length || 0} movies</span>
                         </div>
-                      ) : (
-                        <p className="mt-4 text-xs text-zinc-500">No movies yet.</p>
-                      )}
-                    </div>
+                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Eye size={16} className="text-white" />
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               ) : (

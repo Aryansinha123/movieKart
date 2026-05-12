@@ -147,6 +147,26 @@ export default function ProfileHeaderClient({ user }) {
             <span className="text-sm text-zinc-500">Following</span>
           </div>
         </div>
+
+        {Array.isArray(user?.achievements?.featuredBadges) &&
+        user.achievements.featuredBadges.length > 0 ? (
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-wide text-zinc-500 mb-2">
+              Achievement Showcase ({user.achievements.unlockedCount})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {user.achievements.featuredBadges.map((b) => (
+                <span
+                  key={b.key}
+                  className="text-xs px-3 py-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200"
+                  title={`${b.title} • ${b.rarityLabel}`}
+                >
+                  {b.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {!isSelf ? (

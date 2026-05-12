@@ -287,7 +287,7 @@ export default function CollectionsPage() {
               {collections.map((c) => (
                 <div key={c._id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 flex flex-col sm:flex-row gap-6">
                   {/* Thumbnail */}
-                  <div className="shrink-0 w-full sm:w-28 h-40 sm:h-40 rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
+                  <div className="relative group/thumb shrink-0 w-full sm:w-28 h-40 sm:h-40 rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
                     {c.imageUrl || c.firstMoviePoster ? (
                       <Image
                         src={c.imageUrl || `https://image.tmdb.org/t/p/w300${c.firstMoviePoster}`}
@@ -298,6 +298,17 @@ export default function CollectionsPage() {
                       />
                     ) : (
                       <span className="text-zinc-600 text-sm">No Image</span>
+                    )}
+
+                    {editingId === c._id && editImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditImageUrl("")}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
+                        title="Remove Custom Image"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      </button>
                     )}
                   </div>
 
@@ -311,30 +322,51 @@ export default function CollectionsPage() {
                           className="w-full p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white outline-none text-sm"
                         />
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                          <input
-                            value={editImageUrl}
-                            onChange={(e) => setEditImageUrl(e.target.value)}
-                            placeholder="Custom Image URL (Optional)"
-                            className="w-full sm:w-1/2 p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white outline-none text-sm"
-                          />
+                          <div className="relative w-full sm:w-1/2">
+                            <input
+                              value={editImageUrl}
+                              onChange={(e) => setEditImageUrl(e.target.value)}
+                              placeholder="Custom Image URL (Optional)"
+                              className="w-full p-2 pr-10 rounded-lg bg-zinc-950 border border-zinc-800 text-white outline-none text-sm"
+                            />
+                            {editImageUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setEditImageUrl("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-red-400 transition-colors"
+                                title="Clear Image"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                              </button>
+                            )}
+                          </div>
                           <span className="text-zinc-500 text-xs font-bold">OR</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                if (file.size > 2 * 1024 * 1024) {
-                                  alert("Please select an image smaller than 2MB.");
-                                  return;
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              id={`collection-upload-${c._id}`}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    alert("Please select an image smaller than 2MB.");
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = () => setEditImageUrl(reader.result?.toString() || "");
+                                  reader.readAsDataURL(file);
                                 }
-                                const reader = new FileReader();
-                                reader.onload = () => setEditImageUrl(reader.result?.toString() || "");
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="w-full sm:w-auto text-xs text-zinc-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"
-                          />
+                              }}
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor={`collection-upload-${c._id}`}
+                              className="cursor-pointer text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg font-semibold transition-colors border border-zinc-700/50"
+                            >
+                              Upload
+                            </label>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button

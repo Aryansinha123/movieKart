@@ -34,6 +34,7 @@ export default function WatchedButton({ movieId, onSuccess, className, children 
 
       onSuccess?.();
       toast.success("Added to watched movies!");
+      window.dispatchEvent(new Event("user-stats-update"));
     } catch (err) {
       toast.error(err?.message || "Failed to mark as watched.");
     } finally {

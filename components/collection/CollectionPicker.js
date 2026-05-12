@@ -8,7 +8,7 @@ function getToken() {
   return localStorage.getItem("token") || "";
 }
 
-export default function CollectionPicker({ movieId }) {
+export default function CollectionPicker({ movieId, className, children }) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -19,7 +19,7 @@ export default function CollectionPicker({ movieId }) {
   async function loadCollections() {
     const token = getToken();
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
     setIsLoading(true);
@@ -38,7 +38,7 @@ export default function CollectionPicker({ movieId }) {
       }
       setCollections(Array.isArray(data.collections) ? data.collections : []);
     } catch (e) {
-      alert(e?.message || "Failed to load collections.");
+      toast.error(e?.message || "Failed to load collections.");
     } finally {
       setIsLoading(false);
     }
@@ -52,11 +52,11 @@ export default function CollectionPicker({ movieId }) {
   async function createCollection() {
     const token = getToken();
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
     if (!name.trim()) {
-      alert("Collection name is required.");
+      toast.error("Collection name is required.");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function CollectionPicker({ movieId }) {
       setIsPublic(false);
       await loadCollections();
     } catch (e) {
-      alert(e?.message || "Failed to create collection.");
+      toast.error(e?.message || "Failed to create collection.");
     } finally {
       setIsSaving(false);
     }
@@ -85,7 +85,7 @@ export default function CollectionPicker({ movieId }) {
   async function toggleMovie(collection) {
     const token = getToken();
     if (!token) {
-      alert("Please login first");
+      toast.error("Please login first");
       return;
     }
     const hasMovie = Array.isArray(collection.movies) && collection.movies.includes(movieId);
@@ -110,7 +110,7 @@ export default function CollectionPicker({ movieId }) {
         prev.map((c) => (c._id === data.collection._id ? data.collection : c))
       );
     } catch (e) {
-      alert(e?.message || "Failed to update collection.");
+      toast.error(e?.message || "Failed to update collection.");
     } finally {
       setIsSaving(false);
     }
@@ -120,17 +120,23 @@ export default function CollectionPicker({ movieId }) {
     <>
       <button
         type="button"
-        onClick={() => {
+        onClick={(e) => {
+          e?.preventDefault?.();
+          e?.stopPropagation?.();
           if (!getToken()) {
-            alert("Please login first");
+            toast.error("Please login first");
             return;
           }
           setOpen(true);
         }}
-        className="bg-zinc-800 px-4 py-3 rounded-lg font-semibold hover:bg-zinc-700 flex items-center gap-2"
+        className={className || "bg-zinc-800 px-4 py-3 rounded-lg font-semibold hover:bg-zinc-700 flex items-center gap-2"}
       >
-        <BookmarkPlus size={18} />
-        Collections
+        {children || (
+          <>
+            <BookmarkPlus size={18} />
+            Collections
+          </>
+        )}
       </button>
 
       {open && (

@@ -25,6 +25,7 @@ import TrendingMovies from "@/components/movie/TrendingMovies";
 import SearchBar from "@/components/movie/SearchBar";
 import MovieCard from "@/components/movie/MovieCard";
 import MoodDiscoverySection from "@/components/home/MoodDiscoverySection";
+import toast from "react-hot-toast";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -738,6 +739,33 @@ export default function Home() {
     if (hasToken) {
       fetchRecommendations();
       fetchTasteProfile();
+      (async () => {
+        try {
+          const token = getToken();
+          const res = await fetch("/api/achievements", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json().catch(() => null);
+          if (res.ok && data?.success && Array.isArray(data.notifications) && data.notifications.length > 0) {
+            for (const key of data.notifications.slice(0, 3)) {
+              const badge = (data.badges || []).find((b) => b.key === key);
+              if (badge) {
+                toast.success(`Achievement Earned: ${badge.title}`);
+              }
+            }
+            await fetch("/api/achievements", {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ markNotified: data.notifications }),
+            });
+          }
+        } catch {
+          // silent
+        }
+      })();
     }
   }, [fetchRecommendations, fetchTasteProfile]);
 
@@ -822,9 +850,6 @@ export default function Home() {
 
       {/* Content */}
       <div className="max-w-[1600px] w-full mx-auto px-6 pb-20">
-        <div className="-mt-6 mb-6 relative z-10">
-          <SearchBar />
-        </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -855,6 +880,10 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
                 className="space-y-12 mt-8"
               >
+                <div className="-mt-14 mb-10 relative z-10">
+                  <SearchBar />
+                </div>
+
                 {/* Because You Watched */}
                 {data?.becauseYouWatched?.map((section) => (
                   <div key={section.sourceMovie.id}>
