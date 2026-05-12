@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
 import Collection from "@/models/Collection";
+import User from "@/models/User"; // Required for populate("ownerId")
 
 /** Read a single public collection (for discovery / trending deep links). */
 export async function GET(req, context) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import Collection from "@/models/Collection";
+import User from "@/models/User"; // Required for populate("ownerId")
 
 export async function GET(req, context) {
   try {

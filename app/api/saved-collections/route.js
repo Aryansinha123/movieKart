@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import Collection from "@/models/Collection";
 import SavedCollection from "@/models/SavedCollection";
+import User from "@/models/User"; // Required for populate("ownerId")
 
 export async function GET(req) {
   try {

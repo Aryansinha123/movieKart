@@ -110,10 +110,10 @@ export default function SharedCollectionPage() {
       )}
 
       <div className="mt-16 pt-8 border-t border-zinc-800">
-        <LinkNext href="/" className="group inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
+        <Link href="/" className="group inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
           <span className="group-hover:-translate-x-1 transition-transform">←</span>
           Discover more on MovieKart
-        </LinkNext>
+        </Link>
       </div>
     </main>
   );

@@ -4,15 +4,11 @@ import { fetchMovieDetails } from "@/lib/tmdb";
 import ProfileHeaderClient from "@/components/profile/ProfileHeaderClient";
 import { FolderHeart, Clapperboard, Calendar, Star, Eye, History, Bookmark } from "lucide-react";
 
-async function getProfile(username) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/profile/${username}`,
-    {
-      cache: "no-store",
-    }
-  );
+import { getProfileData } from "@/lib/profile";
 
-  return res.json();
+async function getProfile(username) {
+  // Use the shared data utility instead of fetch to avoid ECONNREFUSED on Vercel
+  return getProfileData(decodeURIComponent(username));
 }
 
 // Helper to fetch details for multiple movies
