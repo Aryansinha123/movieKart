@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 
@@ -225,7 +225,7 @@ export default function Navbar() {
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
                   >
-                    <User size={16} />
+                    <Settings size={16} />
                     Edit Profile
                   </Link>
                   <button
@@ -298,6 +298,44 @@ export default function Navbar() {
           </Link>
           {isMounted && user && (
             <>
+              <div className="flex items-center gap-3 pb-2 border-b border-zinc-800">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-sm font-bold text-white shadow-md overflow-hidden">
+                  {user?.avatar ? (
+                    <Image
+                      src={user.avatar}
+                      alt="Avatar"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
+                <div>
+                  <p className="text-white font-bold">{user.username || "User"}</p>
+                  <p className="text-zinc-500 text-xs truncate max-w-[200px]">{user.email}</p>
+                </div>
+              </div>
+              
+              <Link
+                href={`/profile/${user?.username || "user"}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+              >
+                <User size={20} className="text-zinc-400" />
+                My Profile
+              </Link>
+              
+              <Link
+                href="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+              >
+                <Settings size={20} className="text-zinc-400" />
+                Edit Profile
+              </Link>
+
               <Link
                 href="/watchlist"
                 onClick={() => setMobileMenuOpen(false)}
@@ -306,6 +344,7 @@ export default function Navbar() {
                 <Bookmark size={20} className="text-zinc-400" />
                 Watchlist
               </Link>
+              
               <Link
                 href="/watched"
                 onClick={() => setMobileMenuOpen(false)}

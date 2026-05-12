@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -173,7 +174,16 @@ export default function ProfileHeaderClient({ user }) {
         ) : null}
       </div>
 
-      {!isSelf && (
+      {isSelf ? (
+        <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
+          <Link
+            href="/settings"
+            className="w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg bg-zinc-800 text-zinc-300 border border-zinc-700 flex items-center justify-center gap-2 hover:bg-zinc-700"
+          >
+            Edit Profile
+          </Link>
+        </div>
+      ) : (
         <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
           {loading ? (
             <div className="h-12 w-full md:w-32 bg-zinc-800 animate-pulse rounded-xl" />
