@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 
@@ -24,7 +24,9 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +75,9 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target) && !e.target.closest('#mobile-menu-trigger')) {
+        setMobileMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -95,12 +100,13 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800">
       <Link href="/">
-        <h1 className="text-2xl font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer">
+        <h1 className="text-xl md:text-2xl font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer">
           MovieKart
         </h1>
       </Link>
 
-      <div className="flex items-center gap-6">
+      {/* Desktop Navigation */}
+      <div className="hidden lg:flex items-center gap-6">
         <Link
           href="/"
           className="flex items-center gap-1.5 text-zinc-300 hover:text-white transition-colors group"
@@ -168,7 +174,7 @@ export default function Navbar() {
                   userInitial
                 )}
               </div>
-              <span className="text-sm text-zinc-200 group-hover:text-white transition-colors max-w-[100px] truncate">
+              <span className="text-sm text-zinc-200 group-hover:text-white transition-colors max-w-[100px] truncate hidden sm:inline">
                 {user.username || "User"}
               </span>
               <ChevronDown
@@ -245,6 +251,97 @@ export default function Navbar() {
           </Link>
         )}
       </div>
+
+      {/* Mobile Navigation Trigger */}
+      <div className="flex lg:hidden items-center gap-4">
+        {isMounted && user && <UserSearch />}
+        <button
+          id="mobile-menu-trigger"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 text-zinc-400 hover:text-white transition-colors"
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div 
+          ref={mobileMenuRef}
+          className="absolute top-full left-0 right-0 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800 p-6 flex flex-col gap-6 lg:hidden animate-in slide-in-from-top-4 duration-300 z-50 shadow-2xl"
+        >
+          <Link
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 text-lg font-medium text-zinc-300 hover:text-white transition-colors"
+          >
+            <Sparkles size={20} className="text-purple-400" />
+            Home
+          </Link>
+          {isMounted && user && (
+            <Link
+              href="/feed"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+            >
+              <User size={20} className="text-zinc-400" />
+              Feed
+            </Link>
+          )}
+          <Link
+            href="/collection"
+            onClick={() => setMobileMenuOpen(false)}
+            className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+          >
+            <Bookmark size={20} className="text-zinc-400" />
+            Collections
+          </Link>
+          {isMounted && user && (
+            <>
+              <Link
+                href="/watchlist"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+              >
+                <Bookmark size={20} className="text-zinc-400" />
+                Watchlist
+              </Link>
+              <Link
+                href="/watched"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+              >
+                <Eye size={20} className="text-zinc-400" />
+                Watched
+              </Link>
+            </>
+          )}
+          
+          {!user && (
+            <Link
+              href="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition-all"
+            >
+              <LogIn size={20} />
+              Login
+            </Link>
+          )}
+
+          {user && (
+            <button
+              onClick={() => {
+                handleLogout();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 text-red-400 font-semibold border border-zinc-700 hover:bg-zinc-700 transition-all"
+            >
+              <LogOut size={20} />
+              Log Out
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

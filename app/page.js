@@ -827,24 +827,26 @@ export default function Home() {
           </motion.div>
 
           {/* Tabs */}
-          <div className="flex flex-wrap justify-center gap-3 mt-10">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
-                    activeTab === tab.id
-                      ? "bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/40 text-white shadow-xl shadow-purple-500/10 scale-105"
-                      : "bg-zinc-900/40 border border-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800/60 hover:border-zinc-700"
-                  }`}
-                >
-                  <Icon size={18} />
-                  {tab.label}
-                </button>
-              );
-            })}
+          <div className="w-full max-w-7xl overflow-x-auto no-scrollbar mt-10">
+            <div className="flex justify-start sm:justify-center gap-3 pb-2 min-w-max px-6 sm:px-0">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
+                      activeTab === tab.id
+                        ? "bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/40 text-white shadow-xl shadow-purple-500/10 scale-105"
+                        : "bg-zinc-900/40 border border-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800/60 hover:border-zinc-700"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

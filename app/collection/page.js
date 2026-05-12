@@ -231,43 +231,46 @@ export default function CollectionsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white px-8 py-10">
+    <main className="min-h-screen bg-black text-white px-6 md:px-8 py-10">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold">My Collections</h1>
             <p className="text-zinc-400 mt-1">Organize movies into lists (public or private).</p>
           </div>
-          <Link href="/" className="text-sm text-zinc-300 hover:text-white transition-colors">
-            Back to Home
+          <Link href="/" className="text-sm text-zinc-300 hover:text-white transition-colors bg-zinc-900 px-4 py-2 rounded-lg border border-zinc-800 self-start sm:self-auto">
+            ← Back to Home
           </Link>
         </div>
 
         <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6">
           <h2 className="text-xl font-bold">Create new</h2>
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-center">
+          <div className="mt-5 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Collection name"
-              className="w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none"
+              placeholder="Collection name (e.g. 90s Thrillers)"
+              className="flex-1 p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-red-500/50 transition-all"
             />
-            <label className="flex items-center gap-2 text-sm text-zinc-300">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              Public
-            </label>
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={createCollection}
-              className="bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-5 py-3 rounded-xl font-semibold transition-colors"
-            >
-              {isSaving ? "Please wait..." : "Create"}
-            </button>
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              <label className="flex items-center gap-3 text-sm text-zinc-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-800 bg-zinc-900 text-red-500 focus:ring-red-500/20"
+                />
+                Public
+              </label>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={createCollection}
+                className="bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 active:scale-95"
+              >
+                {isSaving ? "Creating..." : "Create"}
+              </button>
+            </div>
           </div>
         </div>
 

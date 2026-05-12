@@ -138,35 +138,42 @@ export default function MoodDiscoverySection() {
         </div>
         <form onSubmit={handleSearch} className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
-          <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-2xl p-2 shadow-2xl">
-            <div className="pl-4 pr-2 text-zinc-400">
-              <Search size={24} />
+          <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-zinc-900 border border-zinc-800 rounded-2xl p-2 shadow-2xl gap-2">
+            <div className="flex items-center flex-1">
+              <div className="pl-4 pr-2 text-zinc-400">
+                <Search size={24} />
+              </div>
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPrompt(val);
+                  // Auto-detect language from prompt to sync dropdown
+                  const lower = val.toLowerCase();
+                  if (lower.includes("hindi") || lower.includes("bollywood")) setLanguageFilter("hindi");
+                  if (lower.includes("korean") || lower.includes("k-drama")) setLanguageFilter("korean");
+                  if (lower.includes("japanese") || lower.includes("anime")) setLanguageFilter("japanese");
+                  if (lower.includes("spanish")) setLanguageFilter("spanish");
+                  if (lower.includes("french")) setLanguageFilter("french");
+                  if (lower.includes("tamil")) setLanguageFilter("tamil");
+                  if (lower.includes("telugu")) setLanguageFilter("telugu");
+                }}
+                placeholder="e.g., movies for lonely nights..."
+                className="w-full bg-transparent border-none outline-none text-white text-base md:text-lg py-3 placeholder:text-zinc-600"
+              />
             </div>
-            <input
-              type="text"
-              value={prompt}
-              onChange={(e) => {
-                const val = e.target.value;
-                setPrompt(val);
-                // Auto-detect language from prompt to sync dropdown
-                const lower = val.toLowerCase();
-                if (lower.includes("hindi") || lower.includes("bollywood")) setLanguageFilter("hindi");
-                if (lower.includes("korean") || lower.includes("k-drama")) setLanguageFilter("korean");
-                if (lower.includes("japanese") || lower.includes("anime")) setLanguageFilter("japanese");
-                if (lower.includes("spanish")) setLanguageFilter("spanish");
-                if (lower.includes("french")) setLanguageFilter("french");
-                if (lower.includes("tamil")) setLanguageFilter("tamil");
-                if (lower.includes("telugu")) setLanguageFilter("telugu");
-              }}
-              placeholder="e.g., movies for lonely nights, epic space operas, uplifting comfort..."
-              className="w-full bg-transparent border-none outline-none text-white text-lg py-3 placeholder:text-zinc-600"
-            />
             <button
               type="submit"
               disabled={isSearching || !prompt.trim()}
-              className="ml-2 px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-6 py-3.5 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isSearching ? <Loader2 size={20} className="animate-spin" /> : "Discover"}
+              {isSearching ? <Loader2 size={20} className="animate-spin" /> : (
+                <>
+                  <Wand2 size={20} />
+                  <span>Discover</span>
+                </>
+              )}
             </button>
           </div>
         </form>

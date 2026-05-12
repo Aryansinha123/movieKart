@@ -256,97 +256,133 @@ export default async function MoviePage({ params }) {
           />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
-        <div className="absolute bottom-10 left-10 flex gap-8">
-          {movie.poster_path && (
-            <Image
-              src={getImagePath(movie.poster_path)}
-              alt={movie.title || "Movie Poster"}
-              width={300}
-              height={450}
-              className="rounded-xl"
-            />
-          )}
-
-          <div className="max-w-2xl">
-            <h1 className="text-6xl font-bold">
-              {movie.title}
-            </h1>
-
-            <p className="text-zinc-300 mt-4">
-              {movie.overview}
-            </p>
-
-            <div className="flex gap-6 mt-6 text-zinc-400">
-              <p>⭐ {movie.vote_average}</p>
-
-              <p>{movie.release_date}</p>
-
-              <p>
-                {movie.runtime} mins
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3 mt-6">
-              {movie.genres?.map((genre) => (
-                <span
-                  key={genre.id}
-                  className="bg-zinc-800 px-4 py-2 rounded-full text-sm font-medium"
-                >
-                  {genre.name}
-                </span>
-              ))}
-            </div>
-
-            {providers.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm text-zinc-400 font-semibold mb-3">Where to Watch</h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  {providers.slice(0, 5).map((provider) => (
-                    <div
-                      key={provider.provider_id}
-                      className="w-10 h-10 rounded-lg overflow-hidden border border-zinc-700/50"
-                      title={provider.provider_name}
-                    >
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
-                        alt={provider.provider_name}
-                        width={40}
-                        height={40}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                  {watchLink && (
-                    <a
-                      href={watchLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 bg-cyan-400/10 px-3 py-1.5 rounded-full border border-cyan-400/20"
-                    >
-                      Watch Now ↗
-                    </a>
-                  )}
-                </div>
+        <div className="absolute inset-0 flex items-end">
+          <div className="w-full max-w-6xl mx-auto px-6 md:px-10 pb-10 flex flex-col md:flex-row gap-8 items-center md:items-end">
+            {movie.poster_path && (
+              <div className="shrink-0 w-48 md:w-64 lg:w-[300px] shadow-2xl shadow-black/50 rounded-xl overflow-hidden border border-zinc-800">
+                <Image
+                  src={getImagePath(movie.poster_path)}
+                  alt={movie.title || "Movie Poster"}
+                  width={300}
+                  height={450}
+                  className="w-full h-auto"
+                />
               </div>
             )}
 
-            <div className="flex gap-4 mt-8">
-              <WatchlistButton movieId={movie.id} />
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight">
+                {movie.title}
+              </h1>
 
-              <CollectionPicker movieId={movie.id} />
+              <p className="text-zinc-300 mt-4 text-sm md:text-base lg:text-lg max-w-2xl line-clamp-3 md:line-clamp-none">
+                {movie.overview}
+              </p>
 
-              <WatchedButton
-                movieId={movie.id}
-                className="bg-zinc-800 px-6 py-3 rounded-lg font-semibold hover:bg-zinc-700"
-              >
-                ✓ Watched
-              </WatchedButton>
+              <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-6 mt-6 text-zinc-400 text-sm md:text-base font-medium">
+                <p className="flex items-center gap-1.5 text-amber-400">
+                  <Star size={16} fill="currentColor" /> {movie.vote_average?.toFixed(1)}
+                </p>
+
+                <p>{movie.release_date?.substring(0, 4)}</p>
+
+                <p>{movie.runtime} mins</p>
+              </div>
+
+              <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-6">
+                {movie.genres?.map((genre) => (
+                  <span
+                    key={genre.id}
+                    className="bg-zinc-800/80 backdrop-blur-md px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-medium border border-zinc-700/50"
+                  >
+                    {genre.name}
+                  </span>
+                ))}
+              </div>
+
+              {providers.length > 0 && (
+                <div className="mt-6 hidden sm:block">
+                  <h3 className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-3">Where to Watch</h3>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {providers.slice(0, 5).map((provider) => (
+                      <div
+                        key={provider.provider_id}
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-lg overflow-hidden border border-zinc-700/50"
+                        title={provider.provider_name}
+                      >
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
+                          alt={provider.provider_name}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                    {watchLink && (
+                      <a
+                        href={watchLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 bg-cyan-400/10 px-3 py-1.5 rounded-full border border-cyan-400/20"
+                      >
+                        STREAM ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-8">
+                <WatchlistButton movieId={movie.id} />
+                <CollectionPicker movieId={movie.id} />
+                <WatchedButton
+                  movieId={movie.id}
+                  className="bg-zinc-800 hover:bg-zinc-700 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 border border-zinc-700"
+                >
+                  <Check size={18} />
+                  Watched
+                </WatchedButton>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile Providers (shown below backdrop on mobile) */}
+      {providers.length > 0 && (
+        <div className="px-6 py-8 sm:hidden border-b border-zinc-900 bg-zinc-950">
+          <h3 className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-4">Where to Watch</h3>
+          <div className="flex flex-wrap items-center gap-4">
+            {providers.slice(0, 6).map((provider) => (
+              <div
+                key={provider.provider_id}
+                className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-800"
+              >
+                <Image
+                  src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
+                  alt={provider.provider_name}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+            {watchLink && (
+              <a
+                href={watchLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-2 text-center text-sm font-bold text-cyan-400 bg-cyan-400/10 py-3 rounded-xl border border-cyan-400/20"
+              >
+                Stream Now ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Cast */}
       {Array.isArray(credits?.cast) && credits.cast.length > 0 ? (

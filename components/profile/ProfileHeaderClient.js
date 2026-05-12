@@ -97,14 +97,14 @@ export default function ProfileHeaderClient({ user }) {
   }
 
   return (
-    <div className="flex items-center gap-8 bg-zinc-900/50 p-8 rounded-2xl border border-zinc-800">
-      <div className="w-32 h-32 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center text-4xl font-bold border-4 border-zinc-700">
+    <div className="flex flex-col md:flex-row items-center md:items-start gap-8 bg-zinc-900/50 p-6 md:p-8 rounded-2xl border border-zinc-800">
+      <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center text-5xl font-bold border-4 border-zinc-700 shadow-2xl">
         {user.avatar ? (
           <Image
             src={user.avatar}
             alt={`${user.username} avatar`}
-            width={128}
-            height={128}
+            width={160}
+            height={160}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -112,53 +112,57 @@ export default function ProfileHeaderClient({ user }) {
         )}
       </div>
 
-      <div className="flex-1">
-        <h1 className="text-5xl font-bold text-white">{user.username}</h1>
-        <p className="text-zinc-400 mt-3 text-lg">{user.bio}</p>
+      <div className="flex-1 text-center md:text-left min-w-0">
+        <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight truncate">
+          {user.username}
+        </h1>
+        {user.bio && <p className="text-zinc-400 mt-3 text-base md:text-lg max-w-2xl">{user.bio}</p>}
+        
         {!isSelf && tasteMatch !== null ? (
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-4 py-1.5">
-            <span className="text-xs font-semibold tracking-wide text-emerald-300 uppercase">
+            <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
               Taste Match
             </span>
             <span className="text-lg font-bold text-white">{tasteMatch}%</span>
           </div>
         ) : null}
+        
         {!isSelf && sharedGenres.length > 0 ? (
           <p className="text-xs text-zinc-500 mt-2">
             Shared taste: {sharedGenres.slice(0, 3).join(", ")}
           </p>
         ) : null}
 
-        <div className="flex gap-8 mt-5 text-zinc-300 font-medium">
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold text-white">{user.watchedMovies?.length || 0}</span>
-            <span className="text-sm text-zinc-500">Watched</span>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-6 md:gap-10 mt-6 md:mt-8">
+          <div className="flex flex-col items-center md:items-start">
+            <span className="text-xl md:text-2xl font-bold text-white">{user.watchedMovies?.length || 0}</span>
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Watched</span>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold text-white">{user.watchlist?.length || 0}</span>
-            <span className="text-sm text-zinc-500">Watchlist</span>
+          <div className="flex flex-col items-center md:items-start">
+            <span className="text-xl md:text-2xl font-bold text-white">{user.watchlist?.length || 0}</span>
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Watchlist</span>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold text-white">{followersCount}</span>
-            <span className="text-sm text-zinc-500">Followers</span>
+          <div className="flex flex-col items-center md:items-start">
+            <span className="text-xl md:text-2xl font-bold text-white">{followersCount}</span>
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Followers</span>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold text-white">{followingCount}</span>
-            <span className="text-sm text-zinc-500">Following</span>
+          <div className="flex flex-col items-center md:items-start">
+            <span className="text-xl md:text-2xl font-bold text-white">{followingCount}</span>
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Following</span>
           </div>
         </div>
 
         {Array.isArray(user?.achievements?.featuredBadges) &&
         user.achievements.featuredBadges.length > 0 ? (
-          <div className="mt-5">
-            <p className="text-xs uppercase tracking-wide text-zinc-500 mb-2">
-              Achievement Showcase ({user.achievements.unlockedCount})
+          <div className="mt-8">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3">
+              Achievements
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center md:justify-start gap-2">
               {user.achievements.featuredBadges.map((b) => (
                 <span
                   key={b.key}
-                  className="text-xs px-3 py-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200"
+                  className="text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 text-yellow-200"
                   title={`${b.title} • ${b.rarityLabel}`}
                 >
                   {b.title}
@@ -169,28 +173,25 @@ export default function ProfileHeaderClient({ user }) {
         ) : null}
       </div>
 
-      {!isSelf ? (
-        <div className="mt-6">
+      {!isSelf && (
+        <div className="shrink-0 w-full md:w-auto mt-2 md:mt-0">
           {loading ? (
-            <button
-              disabled
-              className="px-6 py-3 rounded-lg font-semibold transition bg-zinc-800 text-zinc-500 cursor-not-allowed"
-            >
-              Loading...
-            </button>
+            <div className="h-12 w-full md:w-32 bg-zinc-800 animate-pulse rounded-xl" />
           ) : (
             <button
               onClick={toggleFollow}
               disabled={saving}
-              className={`px-6 py-3 rounded-lg font-semibold transition disabled:opacity-60 ${
-                following ? "bg-zinc-700 text-white" : "bg-red-500 hover:bg-red-600 text-white"
+              className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95 shadow-lg ${
+                following 
+                  ? "bg-zinc-800 text-zinc-300 border border-zinc-700" 
+                  : "bg-red-500 hover:bg-red-600 text-white shadow-red-500/20"
               }`}
             >
               {following ? "Following" : "Follow"}
             </button>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
