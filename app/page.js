@@ -811,35 +811,36 @@ export default function Home() {
           <div className="absolute top-10 right-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-12 pb-8">
+        <div className="relative max-w-7xl mx-auto px-6 pt-16 pb-12 flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
           >
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
               Your Personalized Home
             </h1>
-            <p className="text-zinc-400 mt-2 text-lg max-w-xl">
+            <p className="text-zinc-400 mt-4 text-lg md:text-xl max-w-2xl font-light">
               AI-powered movie recommendations tailored to your unique taste
             </p>
           </motion.div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mt-8">
+          <div className="flex flex-wrap justify-center gap-3 mt-10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
                     activeTab === tab.id
-                      ? "bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/30 text-white shadow-lg shadow-purple-500/10"
-                      : "bg-zinc-900/50 border border-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                      ? "bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/40 text-white shadow-xl shadow-purple-500/10 scale-105"
+                      : "bg-zinc-900/40 border border-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800/60 hover:border-zinc-700"
                   }`}
                 >
-                  <Icon size={16} />
+                  <Icon size={18} />
                   {tab.label}
                 </button>
               );
@@ -880,7 +881,7 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
                 className="space-y-12 mt-8"
               >
-                <div className="-mt-14 mb-10 relative z-10">
+                <div className="py-12 relative z-10">
                   <SearchBar />
                 </div>
 
