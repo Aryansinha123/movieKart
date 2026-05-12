@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -16,6 +17,12 @@ export default function CollectionsPage() {
   const [name, setName] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedCollections, setSavedCollections] = useState([]);
+
+  // Edit states
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
 
   async function load() {
     try {
@@ -42,6 +49,7 @@ export default function CollectionsPage() {
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to load collections.");
 
       setCollections(Array.isArray(data.collections) ? data.collections : []);
+      await loadSaved(token);
     } catch (e) {
       setError(e?.message || "Failed to load collections.");
     } finally {
@@ -106,6 +114,92 @@ export default function CollectionsPage() {
       setCollections((prev) => prev.map((c) => (c._id === data.collection._id ? data.collection : c)));
     } catch (e) {
       alert(e?.message || "Failed to update collection.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function loadSaved(token) {
+    try {
+      const res = await fetch("/api/saved-collections", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        setSavedCollections(Array.isArray(data.collections) ? data.collections : []);
+      }
+    } catch {
+      setSavedCollections([]);
+    }
+  }
+
+  async function saveEdit(collection) {
+    if (!editName.trim()) {
+      alert("Name is required");
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const token = getToken();
+      const res = await fetch(`/api/collections/${collection._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: editName, imageUrl: editImageUrl }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to update collection.");
+
+      // Preserve firstMoviePoster from previous state
+      const updatedColl = { ...data.collection, firstMoviePoster: collection.firstMoviePoster };
+      setCollections((prev) => prev.map((c) => (c._id === updatedColl._id ? updatedColl : c)));
+      setEditingId(null);
+    } catch (e) {
+      alert(e?.message || "Failed to update collection.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function enableShare(collection) {
+    if (!collection.isPublic) {
+      alert("Make the collection public first, then you can share it.");
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    if (collection.shareEnabled && collection.shareToken) {
+      const url = `${origin}/collection/share/${collection.shareToken}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        alert(`Share link copied:\n${url}`);
+      } catch {
+        alert(url);
+      }
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const token = getToken();
+      const res = await fetch(`/api/collections/${collection._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ shareEnabled: true }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to enable sharing.");
+
+      setCollections((prev) => prev.map((x) => (x._id === data.collection._id ? data.collection : x)));
+      const url = `${origin}/collection/share/${data.collection.shareToken}`;
+      await navigator.clipboard.writeText(url);
+      alert(`Share link copied:\n${url}`);
+    } catch (e) {
+      alert(e?.message || "Failed.");
     } finally {
       setIsSaving(false);
     }
@@ -186,61 +280,165 @@ export default function CollectionsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {collections.map((c) => (
-                <div key={c._id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-xl font-bold truncate">{c.name}</p>
-                      <p className="text-sm text-zinc-400 mt-1">
-                        {c.isPublic ? "Public" : "Private"} • {c.movies?.length || 0} movies
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isSaving}
-                        onClick={() => togglePrivacy(c)}
-                        className="text-sm px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 transition-colors"
-                      >
-                        Make {c.isPublic ? "Private" : "Public"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isSaving}
-                        onClick={() => deleteCollection(c)}
-                        className="text-sm px-3 py-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 disabled:opacity-60 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
+                <div key={c._id} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 flex flex-col sm:flex-row gap-6">
+                  {/* Thumbnail */}
+                  <div className="shrink-0 w-full sm:w-28 h-40 sm:h-40 rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
+                    {c.imageUrl || c.firstMoviePoster ? (
+                      <Image
+                        src={c.imageUrl || `https://image.tmdb.org/t/p/w300${c.firstMoviePoster}`}
+                        alt={c.name}
+                        width={112}
+                        height={160}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-zinc-600 text-sm">No Image</span>
+                    )}
                   </div>
 
-                  {Array.isArray(c.movies) && c.movies.length > 0 ? (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {c.movies.slice(0, 12).map((id) => (
-                        <Link
-                          key={id}
-                          href={`/movie/${id}`}
-                          className="text-sm px-3 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    {editingId === c._id ? (
+                      <div className="space-y-3 mb-4">
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Collection name"
+                          className="w-full p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white outline-none text-sm"
+                        />
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                          <input
+                            value={editImageUrl}
+                            onChange={(e) => setEditImageUrl(e.target.value)}
+                            placeholder="Custom Image URL (Optional)"
+                            className="w-full sm:w-1/2 p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white outline-none text-sm"
+                          />
+                          <span className="text-zinc-500 text-xs font-bold">OR</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 2 * 1024 * 1024) {
+                                  alert("Please select an image smaller than 2MB.");
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onload = () => setEditImageUrl(reader.result?.toString() || "");
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="w-full sm:w-auto text-xs text-zinc-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => saveEdit(c)}
+                            disabled={isSaving}
+                            className="bg-purple-600 hover:bg-purple-700 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            disabled={isSaving}
+                            className="bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-xl font-bold truncate">{c.name}</p>
+                          <p className="text-sm text-zinc-400 mt-1">
+                            {c.isPublic ? "Public" : "Private"} • {c.movies?.length || 0} movies
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          <button
+                            onClick={() => {
+                              setEditingId(c._id);
+                              setEditName(c.name);
+                              setEditImageUrl(c.imageUrl || "");
+                            }}
+                            className="text-sm px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => togglePrivacy(c)}
+                            className="text-sm px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 transition-colors"
+                          >
+                            Make {c.isPublic ? "Private" : "Public"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => deleteCollection(c)}
+                            className="text-sm px-3 py-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 disabled:opacity-60 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-auto pt-4 flex flex-wrap gap-2 border-t border-zinc-800/60">
+                      <Link
+                        href={`/collection/view/${c._id}`}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700"
+                      >
+                        {c.isPublic ? "Public page" : "View movies"}
+                      </Link>
+                      {c.isPublic ? (
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => enableShare(c)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-purple-600/80 hover:bg-purple-600 disabled:opacity-50"
                         >
-                          #{id}
-                        </Link>
-                      ))}
-                      {c.movies.length > 12 ? (
-                        <span className="text-sm text-zinc-500 px-2 py-1">
-                          +{c.movies.length - 12} more
-                        </span>
+                          {c.shareEnabled ? "Copy share link" : "Create share link"}
+                        </button>
                       ) : null}
                     </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-zinc-500">
-                      No movies yet. Open a movie page and click “Collections”.
-                    </p>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {savedCollections.length > 0 ? (
+          <div className="mt-12 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6">
+            <h2 className="text-xl font-bold">Saved collections</h2>
+            <p className="text-sm text-zinc-500 mt-1">Lists you bookmarked from the community.</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {savedCollections.map((c) => (
+                <div
+                  key={c._id}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 flex justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{c.name}</p>
+                    <p className="text-xs text-zinc-500">
+                      {c.owner?.username ? `by ${c.owner.username}` : ""}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/collection/view/${c._id}`}
+                    className="text-xs self-center px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 shrink-0"
+                  >
+                    Open
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 
 import MovieCard from "@/components/movie/MovieCard";
 import WatchedButton from "@/components/movie/WatchedButton";
@@ -75,6 +76,25 @@ export default function WatchlistPage() {
     setMovies((prev) => prev.filter((m) => m?.id !== movieId));
   }
 
+  async function handleRemove(movieId) {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/watchlist", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ movieId }),
+      });
+      if (res.ok) {
+        setMovies((prev) => prev.filter((m) => m?.id !== movieId));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black text-white px-8 py-10">
       <div className="max-w-6xl mx-auto">
@@ -121,12 +141,19 @@ export default function WatchlistPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {movies.map((movie, i) => (
-                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i}>
+                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i} className="relative group">
                   <MovieCard movie={movie} priority={i < 2} />
                   <WatchedButton
                     movieId={movie?.id}
                     onSuccess={() => handleMarkedWatched(movie?.id)}
                   />
+                  <button
+                    onClick={() => handleRemove(movie?.id)}
+                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="Remove from watchlist"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>

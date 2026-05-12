@@ -15,6 +15,161 @@ function Star({ filled, onClick, label }) {
   );
 }
 
+function ReviewCard({ review, token, onLikeChange }) {
+  const [likesCount, setLikesCount] = useState(review.likesCount ?? 0);
+  const [liked, setLiked] = useState(!!review.likedByMe);
+  const [showThread, setShowThread] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [replyBody, setReplyBody] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  useEffect(() => {
+    setLikesCount(review.likesCount ?? 0);
+    setLiked(!!review.likedByMe);
+  }, [review.likesCount, review.likedByMe, review._id]);
+
+  async function toggleLike() {
+    if (!token) {
+      alert("Please login to like reviews.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/review-likes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reviewId: review._id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLiked(data.liked);
+        setLikesCount(data.likesCount);
+        onLikeChange?.(review._id, data.likesCount, data.liked);
+      }
+    } catch {
+      alert("Like failed.");
+    }
+  }
+
+  async function loadComments() {
+    setLoadingComments(true);
+    try {
+      const res = await fetch(
+        `/api/comments?targetType=review&targetId=${review._id}`,
+        { cache: "no-store" }
+      );
+      const data = await res.json();
+      if (data.success) setComments(data.comments || []);
+    } finally {
+      setLoadingComments(false);
+    }
+  }
+
+  useEffect(() => {
+    if (showThread) loadComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showThread, review._id]);
+
+  async function postComment(e) {
+    e.preventDefault();
+    if (!token) return alert("Login to comment.");
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        targetType: "review",
+        targetId: review._id,
+        body: replyBody,
+      }),
+    });
+    const j = await res.json();
+    if (j.success) {
+      setReplyBody("");
+      loadComments();
+    } else alert(j.message || "Failed");
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold text-white truncate">{review.username}</p>
+        <p className="text-sm text-yellow-400">
+          {"★".repeat(review.rating)}
+          <span className="text-zinc-600">{"★".repeat(5 - review.rating)}</span>
+        </p>
+      </div>
+      {review.comment ? (
+        <p className="text-zinc-300 mt-2 whitespace-pre-wrap">{review.comment}</p>
+      ) : (
+        <p className="text-zinc-500 mt-2 text-sm">No comment.</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleLike}
+          className={`text-sm px-3 py-1 rounded-lg border transition-colors ${
+            liked
+              ? "border-pink-500/50 bg-pink-500/10 text-pink-200"
+              : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+          }`}
+        >
+          ♥ {likesCount}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowThread((s) => !s)}
+          className="text-sm text-purple-300 hover:text-purple-200"
+        >
+          {showThread ? "Hide discussion" : "Discussion"}
+        </button>
+      </div>
+
+      {showThread ? (
+        <div className="mt-4 rounded-lg border border-zinc-800/80 bg-black/30 p-3">
+          {loadingComments ? (
+            <p className="text-xs text-zinc-500">Loading…</p>
+          ) : (
+            <ul className="space-y-2 mb-3">
+              {comments.map((c) => (
+                <li key={c._id} className="text-sm">
+                  <span className="font-medium text-zinc-200">{c.username}</span>
+                  <p className="text-zinc-400 mt-0.5 whitespace-pre-wrap">{c.body}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {token ? (
+            <form onSubmit={postComment} className="space-y-2">
+              <textarea
+                value={replyBody}
+                onChange={(e) => setReplyBody(e.target.value)}
+                rows={2}
+                maxLength={2000}
+                placeholder="Reply to this review…"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-800 p-2 text-sm"
+              />
+              <button
+                type="submit"
+                className="text-xs px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 font-medium"
+              >
+                Post
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs text-zinc-500">Sign in to join the discussion.</p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function ReviewsSection({ movieId }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,7 +188,9 @@ export default function ReviewsSection({ movieId }) {
     try {
       setIsLoading(true);
       setError("");
-      const res = await fetch(`/api/reviews?movieId=${movieId}`, { cache: "no-store" });
+      const headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`/api/reviews?movieId=${movieId}`, { cache: "no-store", headers });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to load reviews.");
       setReviews(Array.isArray(data.reviews) ? data.reviews : []);
@@ -47,7 +204,7 @@ export default function ReviewsSection({ movieId }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [movieId]);
+  }, [movieId, token]);
 
   async function submitReview(e) {
     e.preventDefault();
@@ -136,23 +293,18 @@ export default function ReviewsSection({ movieId }) {
           ) : (
             <div className="space-y-4">
               {reviews.map((r) => (
-                <div
+                <ReviewCard
                   key={r._id}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-semibold text-white truncate">{r.username}</p>
-                    <p className="text-sm text-yellow-400">
-                      {"★".repeat(r.rating)}
-                      <span className="text-zinc-600">{"★".repeat(5 - r.rating)}</span>
-                    </p>
-                  </div>
-                  {r.comment ? (
-                    <p className="text-zinc-300 mt-2 whitespace-pre-wrap">{r.comment}</p>
-                  ) : (
-                    <p className="text-zinc-500 mt-2 text-sm">No comment.</p>
-                  )}
-                </div>
+                  review={r}
+                  token={token}
+                  onLikeChange={(id, count, liked) => {
+                    setReviews((prev) =>
+                      prev.map((x) =>
+                        x._id === id ? { ...x, likesCount: count, likedByMe: liked } : x
+                      )
+                    );
+                  }}
+                />
               ))}
             </div>
           )}
@@ -161,4 +313,3 @@ export default function ReviewsSection({ movieId }) {
     </section>
   );
 }
-

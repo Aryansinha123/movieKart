@@ -105,9 +105,10 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
       clearTimeout(timeoutId);
       lastError = err;
 
-      const isAbort = err?.name === "AbortError";
+      const isAbort = err?.name === "AbortError" || err?.cause?.name === "AbortError";
       const isConnReset = err?.cause?.code === "ECONNRESET" || err?.code === "ECONNRESET";
-      const isRetryable = isAbort || isConnReset;
+      const isTypeError = err?.name === "TypeError";
+      const isRetryable = isAbort || isConnReset || isTypeError;
 
       if (!isRetryable || attempt === retries) break;
       const backoffMs = 250 * 2 ** attempt;
@@ -121,31 +122,61 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
 async function getMovie(id) {
   if (!process.env.TMDB_API_KEY) return null;
 
-  const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-      accept: "application/json",
-    },
-    cache: "no-store",
-  });
+  try {
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
 
-  if (!res.ok) return null;
-  return await res.json().catch(() => null);
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch (err) {
+    console.error(`Failed to fetch movie ${id}:`, err?.message || err);
+    return null;
+  }
 }
 
 async function getCredits(id) {
   if (!process.env.TMDB_API_KEY) return null;
 
-  const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/credits`, {
-    headers: {
-      Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-      accept: "application/json",
-    },
-    cache: "no-store",
-  });
+  try {
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/credits`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
 
-  if (!res.ok) return null;
-  return await res.json().catch(() => null);
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch (err) {
+    console.error(`Failed to fetch credits for ${id}:`, err?.message || err);
+    return null;
+  }
+}
+
+async function getWatchProviders(id) {
+  if (!process.env.TMDB_API_KEY) return null;
+
+  try {
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3/movie/${id}/watch/providers`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch (err) {
+    console.error(`Failed to fetch watch providers for ${id}:`, err?.message || err);
+    return null;
+  }
 }
 
 export default async function MoviePage({ params }) {
@@ -153,6 +184,24 @@ export default async function MoviePage({ params }) {
   const id = resolvedParams?.id;
   const movie = id ? await getMovie(id) : null;
   const credits = id ? await getCredits(id) : null;
+  const watchProvidersRes = id ? await getWatchProviders(id) : null;
+
+  let providers = [];
+  let watchLink = null;
+  if (watchProvidersRes?.results) {
+    const country =
+      watchProvidersRes.results["US"] ||
+      watchProvidersRes.results["IN"] ||
+      watchProvidersRes.results["GB"] ||
+      Object.values(watchProvidersRes.results)[0];
+    
+    if (country) {
+      providers = country.flatrate || country.rent || country.buy || [];
+      // Remove duplicates by provider_id
+      providers = Array.from(new Map(providers.map(p => [p.provider_id, p])).values());
+      watchLink = country.link;
+    }
+  }
 
   if (!movie) {
     return (
@@ -216,12 +265,45 @@ export default async function MoviePage({ params }) {
               {movie.genres?.map((genre) => (
                 <span
                   key={genre.id}
-                  className="bg-zinc-800 px-4 py-2 rounded-full"
+                  className="bg-zinc-800 px-4 py-2 rounded-full text-sm font-medium"
                 >
                   {genre.name}
                 </span>
               ))}
             </div>
+
+            {providers.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm text-zinc-400 font-semibold mb-3">Where to Watch</h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  {providers.slice(0, 5).map((provider) => (
+                    <div
+                      key={provider.provider_id}
+                      className="w-10 h-10 rounded-lg overflow-hidden border border-zinc-700/50"
+                      title={provider.provider_name}
+                    >
+                      <Image
+                        src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
+                        alt={provider.provider_name}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  {watchLink && (
+                    <a
+                      href={watchLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 bg-cyan-400/10 px-3 py-1.5 rounded-full border border-cyan-400/20"
+                    >
+                      Watch Now ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-4 mt-8">
               <WatchlistButton movieId={movie.id} />

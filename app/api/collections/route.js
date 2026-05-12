@@ -16,6 +16,21 @@ export async function GET(req) {
       .sort({ updatedAt: -1 })
       .lean();
 
+    // Fetch poster for the first movie of each collection
+    for (const c of collections) {
+      if (!c.imageUrl && c.movies && c.movies.length > 0) {
+        try {
+          const tmdbRes = await fetch(`https://api.themoviedb.org/3/movie/${c.movies[0]}?api_key=${process.env.TMDB_API_KEY}`);
+          if (tmdbRes.ok) {
+            const tmdbData = await tmdbRes.json();
+            c.firstMoviePoster = tmdbData.poster_path;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     return NextResponse.json({ success: true, collections });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

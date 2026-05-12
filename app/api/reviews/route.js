@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import Review from "@/models/Review";
+import ReviewLike from "@/models/ReviewLike";
 import User from "@/models/User";
 import Activity from "@/models/Activity";
 
@@ -26,7 +27,32 @@ export async function GET(req) {
       .limit(100)
       .lean();
 
-    return NextResponse.json({ success: true, reviews });
+    const ids = reviews.map((r) => r._id);
+    const likeCounts = await ReviewLike.aggregate([
+      { $match: { reviewId: { $in: ids } } },
+      { $group: { _id: "$reviewId", likesCount: { $sum: 1 } } },
+    ]);
+    const countBy = new Map(likeCounts.map((x) => [x._id.toString(), x.likesCount]));
+
+    let likedSet = new Set();
+    const userData = getUserFromToken(req);
+    if (userData && ids.length > 0) {
+      const mine = await ReviewLike.find({
+        userId: userData.id,
+        reviewId: { $in: ids },
+      })
+        .select("reviewId")
+        .lean();
+      likedSet = new Set(mine.map((m) => m.reviewId.toString()));
+    }
+
+    const enriched = reviews.map((r) => ({
+      ...r,
+      likesCount: countBy.get(r._id.toString()) || 0,
+      likedByMe: likedSet.has(r._id.toString()),
+    }));
+
+    return NextResponse.json({ success: true, reviews: enriched });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

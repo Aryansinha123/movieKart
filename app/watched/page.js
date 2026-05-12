@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 
 import MovieCard from "@/components/movie/MovieCard";
 
@@ -70,6 +71,25 @@ export default function WatchedPage() {
     };
   }, [token]);
 
+  async function handleDelete(movieId) {
+    if (!token) return;
+    try {
+      const res = await fetch("/api/watched", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ movieId }),
+      });
+      if (res.ok) {
+        setMovies((prev) => prev.filter((m) => m?.id !== movieId));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black text-white px-8 py-10">
       <div className="max-w-6xl mx-auto">
@@ -109,11 +129,19 @@ export default function WatchedPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {movies.map((movie, i) => (
-                <MovieCard
-                  key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i}
-                  movie={movie}
-                  priority={i < 2}
-                />
+                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i} className="relative group">
+                  <MovieCard
+                    movie={movie}
+                    priority={i < 2}
+                  />
+                  <button
+                    onClick={() => handleDelete(movie?.id)}
+                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="Remove from watched"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               ))}
             </div>
           )}

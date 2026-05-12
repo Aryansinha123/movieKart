@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import MovieCard from "./MovieCard";
 
 export default function SearchBar() {
@@ -31,14 +32,17 @@ export default function SearchBar() {
   }, [query]);
 
   return (
-    <section className="px-10 pb-10">
-      <div className="max-w-3xl mx-auto">
+    <section className="py-4">
+      <div className="max-w-3xl mx-auto relative group">
+        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-zinc-500 group-focus-within:text-cyan-400 transition-colors">
+          <Search size={20} />
+        </div>
         <input
           type="text"
-          placeholder="Search movies..."
+          placeholder="Search for movies..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none"
+          className="w-full pl-12 pr-4 py-4 rounded-xl bg-zinc-900/80 border border-zinc-800 text-white outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/10 transition-all shadow-lg backdrop-blur-sm"
         />
       </div>
 

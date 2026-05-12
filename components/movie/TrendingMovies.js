@@ -28,10 +28,16 @@ export default function TrendingMovies() {
   }, []);
 
   return (
-    <section className="p-10">
-      <h1 className="text-3xl font-bold mb-8">
-        Trending Movies
-      </h1>
+    <section className="py-10">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-white">Trending Globally</h2>
+          <p className="text-sm text-zinc-500 mt-0.5">The most popular movies around the world right now</p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {movies?.map((movie) => (

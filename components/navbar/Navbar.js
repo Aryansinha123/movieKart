@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 
@@ -103,15 +103,10 @@ export default function Navbar() {
       <div className="flex items-center gap-6">
         <Link
           href="/"
-          className="text-zinc-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-zinc-300 hover:text-white transition-colors group"
         >
-          Home
-        </Link>
-        <Link
-          href="/discover"
-          className="text-zinc-300 hover:text-white transition-colors"
-        >
-          Discover
+          <Sparkles size={14} className="text-purple-400 group-hover:text-purple-300 transition-colors" />
+          <span className="font-medium">Home</span>
         </Link>
         {isMounted && user && (
           <Link
