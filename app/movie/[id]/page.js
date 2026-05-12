@@ -90,6 +90,9 @@ import WatchlistButton from "@/components/movie/WatchListButton";
 import WatchedButton from "@/components/movie/WatchedButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
+import { Star, Check } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
   let lastError;

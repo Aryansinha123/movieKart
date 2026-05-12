@@ -26,6 +26,7 @@
 //   }
 // }
 import { NextResponse } from "next/server";
+import { mapTmdbResult } from "@/lib/tmdb";
 
 async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
   let lastError;
@@ -106,7 +107,6 @@ export async function GET(req, context) {
       );
     }
 
-    const { mapTmdbResult } = require("@/lib/tmdb");
     return NextResponse.json(mapTmdbResult({ ...data, media_type: isTv ? "tv" : "movie" }));
   } catch (error) {
     console.log("TMDB ERROR:", error);
