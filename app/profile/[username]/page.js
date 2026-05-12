@@ -50,7 +50,7 @@ export default async function ProfilePage(context) {
   const watchedMoviesDetails = await getMoviesDetails(user.watchedMovies);
   const watchlistDetails = await getMoviesDetails(user.watchlist);
   const collectionThumbs = await getCollectionThumbs(user.publicCollections || []);
-
+  return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
       <div className="max-w-5xl mx-auto">
         {/* Profile Header */}
