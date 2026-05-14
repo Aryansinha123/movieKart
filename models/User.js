@@ -54,10 +54,20 @@ const UserSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+
+    preferredLanguages: {
+      type: [String],
+      default: [], // e.g. ["hi", "en", "te", "ta"]
+    },
   },
   {
+    // Force schema update
     timestamps: true,
   },
 );
 
-export default mongoose.models.User || mongoose.model("User", UserSchema);
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+export default mongoose.model("User", UserSchema);

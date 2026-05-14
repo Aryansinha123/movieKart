@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
+import MovieSearch from "@/components/navbar/MovieSearch";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -20,6 +21,7 @@ function getUserFromToken(token) {
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   // Keep the first render identical between server and client to avoid hydration mismatch.
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState(null);
@@ -147,8 +149,8 @@ export default function Navbar() {
           </Link>
         )}
 
-        {/* User Search */}
-        {isMounted && user && <UserSearch />}
+        {/* Search */}
+        {isMounted && user && (pathname === "/" ? <UserSearch /> : <MovieSearch />)}
 
         {/* Auth section */}
         {!isMounted ? (
@@ -254,7 +256,7 @@ export default function Navbar() {
 
       {/* Mobile Navigation Trigger */}
       <div className="flex lg:hidden items-center gap-4">
-        {isMounted && user && <UserSearch />}
+        {isMounted && user && (pathname === "/" ? <UserSearch /> : <MovieSearch />)}
         <button
           id="mobile-menu-trigger"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

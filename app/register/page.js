@@ -1,111 +1,3 @@
-// "use client";
-
-// import { useState } from "react";
-// import { useRouter } from "next/navigation";
-// import Link from "next/link";
-// import { toast } from "react-hot-toast";
-// import { Eye, EyeOff } from "lucide-react";
-
-// export default function RegisterPage() {
-//   const router = useRouter();
-//   const [showPassword, setShowPassword] = useState(false);
-
-//   const [formData, setFormData] = useState({
-//     username: "",
-//     email: "",
-//     password: "",
-//   });
-
-//   async function handleSubmit(e) {
-//     e.preventDefault();
-
-//     const res = await fetch("/api/auth/register", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(formData),
-//     });
-
-//     const data = await res.json();
-
-//     if (data.success) {
-//       toast.success("Account Created");
-//       router.push("/login");
-//     } else {
-//       toast.error(data.message);
-//     }
-//   }
-
-//   return (
-//     <main className="min-h-screen flex items-center justify-center bg-black text-white">
-//       <form
-//         onSubmit={handleSubmit}
-//         className="bg-zinc-900 p-8 rounded-xl w-[400px] space-y-4"
-//       >
-//         <h1 className="text-3xl font-bold text-center">
-//           Register
-//         </h1>
-
-//         <input
-//           type="text"
-//           placeholder="Username"
-//           className="w-full p-3 rounded bg-zinc-800"
-//           onChange={(e) =>
-//             setFormData({
-//               ...formData,
-//               username: e.target.value,
-//             })
-//           }
-//         />
-
-//         <input
-//           type="email"
-//           placeholder="Email"
-//           className="w-full p-3 rounded bg-zinc-800"
-//           onChange={(e) =>
-//             setFormData({
-//               ...formData,
-//               email: e.target.value,
-//             })
-//           }
-//         />
-
-//         <div className="relative">
-//           <input
-//             type={showPassword ? "text" : "password"}
-//             placeholder="Password"
-//             className="w-full p-3 pr-12 rounded bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-red-500"
-//             onChange={(e) =>
-//               setFormData({
-//                 ...formData,
-//                 password: e.target.value,
-//               })
-//             }
-//           />
-//           <button
-//             type="button"
-//             onClick={() => setShowPassword(!showPassword)}
-//             className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-//           >
-//             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-//           </button>
-//         </div>
-
-//         <button className="w-full bg-red-500 hover:bg-red-600 p-3 rounded">
-//           Create Account
-//         </button>
-
-//         <p className="text-center text-sm text-zinc-400">
-//           Already have an account?{" "}
-//           <Link href="/login" className="text-red-400 hover:text-red-300 transition-colors">
-//             Login
-//           </Link>
-//         </p>
-//       </form>
-//     </main>
-//   );
-// }
 "use client";
 
 import { useState } from "react";
@@ -142,7 +34,25 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [preferredLanguages, setPreferredLanguages] = useState([]);
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
+
+  const availableLanguages = [
+    { id: "hi", name: "Hindi" },
+    { id: "en", name: "English" },
+    { id: "te", name: "Telugu" },
+    { id: "ta", name: "Tamil" },
+    { id: "ml", name: "Malayalam" },
+    { id: "kn", name: "Kannada" },
+    { id: "ko", name: "Korean" },
+    { id: "ja", name: "Japanese" },
+  ];
+
+  const toggleLanguage = (langId) => {
+    setPreferredLanguages((prev) =>
+      prev.includes(langId) ? prev.filter((id) => id !== langId) : [...prev, langId]
+    );
+  };
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -161,7 +71,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, preferredLanguages }),
       });
       const data = await res.json();
       if (data.success) {
@@ -181,10 +91,10 @@ export default function RegisterPage() {
   const step1 = !!formData.username;
   const step2 = !!formData.email;
   const step3 = strength === "good" || strength === "strong";
+  const step4 = preferredLanguages.length > 0;
 
   return (
     <main className="min-h-screen flex bg-[#0a0a0a] text-white font-sans overflow-hidden relative">
-
       {/* Background art */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0"
@@ -237,15 +147,15 @@ export default function RegisterPage() {
 
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center px-6 py-12 relative z-10">
-        <div className="w-full max-w-sm bg-white/[0.04] border border-white/[0.08] rounded-2xl p-10">
+        <div className="w-full max-w-md bg-white/[0.04] border border-white/[0.08] rounded-2xl p-10 max-h-[90vh] overflow-y-auto no-scrollbar">
           <h2 className="font-serif text-2xl font-bold mb-1">Create account</h2>
           <p className="text-sm text-white/32 mb-6">Free forever · No credit card needed</p>
 
           {/* Progress bar */}
           <div className="flex gap-1.5 mb-7">
-            {[step1, step2, step3].map((active, i) => (
+            {[step1, step2, step3, step4].map((active, i) => (
               <div key={i} className="h-[3px] flex-1 rounded-full transition-all duration-300"
-                style={{ background: active ? (i === 0 ? "#dc2626" : i === 1 ? "rgba(220,38,38,0.5)" : "rgba(220,38,38,0.35)") : "rgba(255,255,255,0.1)" }} />
+                style={{ background: active ? (i === 0 ? "#dc2626" : i === 1 ? "rgba(220,38,38,0.5)" : i === 2 ? "rgba(220,38,38,0.35)" : "rgba(220,38,38,0.25)") : "rgba(255,255,255,0.1)" }} />
             ))}
           </div>
 
@@ -298,6 +208,30 @@ export default function RegisterPage() {
               <span className="text-[11px] transition-colors" style={{ color: cfg ? cfg.color : "rgba(255,255,255,0.25)" }}>
                 {cfg ? `Strength: ${cfg.label}` : "Use 8+ characters with a mix of letters & numbers"}
               </span>
+            </div>
+
+            {/* Language Preference */}
+            <div className="flex flex-col gap-2 mt-2">
+              <label className="text-[11px] font-medium text-white/45 uppercase tracking-widest">Preferred Languages (Select at least one)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {availableLanguages.map((lang) => {
+                  const selected = preferredLanguages.includes(lang.id);
+                  return (
+                    <button
+                      key={lang.id}
+                      type="button"
+                      onClick={() => toggleLanguage(lang.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+                        selected
+                          ? "bg-red-600/20 border-red-600/50 text-red-500"
+                          : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+                      }`}
+                    >
+                      {lang.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Terms */}

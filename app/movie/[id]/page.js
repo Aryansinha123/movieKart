@@ -84,6 +84,7 @@
 //   );
 // }
 import Image from "next/image";
+import Link from "next/link";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "@/components/movie/WatchListButton";
@@ -152,9 +153,38 @@ async function getMovie(idStr) {
       release_date: data.first_air_date || data.release_date,
       media_type: isTv ? "tv" : "movie",
       runtime: isTv ? (data.episode_run_time?.[0] || 0) : data.runtime,
+      spoken_languages: data.spoken_languages,
+      adult: data.adult,
+      number_of_seasons: data.number_of_seasons,
+      number_of_episodes: data.number_of_episodes,
     };
   } catch (err) {
     console.error(`Failed to fetch movie ${idStr}:`, err?.message || err);
+    return null;
+  }
+}
+
+async function getVideos(idStr) {
+  if (!process.env.TMDB_API_KEY) return null;
+
+  try {
+    const numericId = parseInt(idStr, 10);
+    const isTv = numericId < 0;
+    const realId = isTv ? -numericId : numericId;
+    const path = isTv ? `/tv/${realId}/videos` : `/movie/${realId}/videos`;
+
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3${path}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } catch (err) {
+    console.error(`Failed to fetch videos for ${idStr}:`, err?.message || err);
     return null;
   }
 }
@@ -209,12 +239,26 @@ async function getWatchProviders(idStr) {
   }
 }
 
+export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
+  const movie = id ? await getMovie(id) : null;
+
+  if (!movie) return { title: "Movie not found | MovieKart" };
+
+  return {
+    title: `${movie.title} (${movie.release_date?.substring(0, 4) || "TBA"}) | MovieKart`,
+    description: movie.overview,
+  };
+}
+
 export default async function MoviePage({ params }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const movie = id ? await getMovie(id) : null;
   const credits = id ? await getCredits(id) : null;
   const watchProvidersRes = id ? await getWatchProviders(id) : null;
+  const videosRes = id ? await getVideos(id) : null;
 
   let providers = [];
   let watchLink = null;
@@ -284,6 +328,18 @@ export default async function MoviePage({ params }) {
                 {movie.overview}
               </p>
 
+              {credits?.crew?.find(c => c.job === "Director") && (
+                <div className="mt-4 text-sm md:text-base">
+                  <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Director:</span>
+                  <Link 
+                    href={`/person/${credits.crew.find(c => c.job === "Director").id}`}
+                    className="ml-2 text-white font-bold hover:text-red-500 transition-colors"
+                  >
+                    {credits.crew.find(c => c.job === "Director").name}
+                  </Link>
+                </div>
+              )}
+
               <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-6 mt-6 text-zinc-400 text-sm md:text-base font-medium">
                 <p className="flex items-center gap-1.5 text-amber-400">
                   <Star size={16} fill="currentColor" /> {movie.vote_average?.toFixed(1)}
@@ -291,8 +347,32 @@ export default async function MoviePage({ params }) {
 
                 <p>{movie.release_date?.substring(0, 4)}</p>
 
-                <p>{movie.runtime} mins</p>
+                {movie.media_type === "tv" ? (
+                  <>
+                    <p>{movie.number_of_seasons} Seasons</p>
+                    <p>{movie.number_of_episodes} Episodes</p>
+                  </>
+                ) : (
+                  <p>{movie.runtime} mins</p>
+                )}
+
+                {movie.adult && (
+                  <span className="px-1.5 py-0.5 rounded border border-red-500/50 text-red-500 text-[10px] font-bold">
+                    18+
+                  </span>
+                )}
               </div>
+
+              {movie.spoken_languages?.length > 0 && (
+                <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs text-zinc-500 uppercase tracking-wider font-semibold">
+                  <div className="flex items-center gap-1.5">
+                    <span>Languages:</span>
+                    <span className="text-zinc-300">
+                      {movie.spoken_languages.map(l => l.english_name || l.name).join(", ")}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-6">
                 {movie.genres?.map((genre) => (
@@ -393,9 +473,10 @@ export default async function MoviePage({ params }) {
           <h2 className="text-2xl font-bold">Cast</h2>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {credits.cast.slice(0, 12).map((p) => (
-              <div
+              <Link
                 key={p.cast_id ?? p.credit_id ?? p.id}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden"
+                href={`/person/${p.id}`}
+                className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden hover:border-red-500/50 transition-colors group"
               >
                 {p.profile_path ? (
                   <Image
@@ -403,7 +484,7 @@ export default async function MoviePage({ params }) {
                     alt={p.name}
                     width={300}
                     height={450}
-                    className="w-full h-[210px] object-cover"
+                    className="w-full h-[210px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-[210px] bg-zinc-800 flex items-center justify-center text-zinc-400 text-sm">
@@ -414,11 +495,47 @@ export default async function MoviePage({ params }) {
                   <p className="font-semibold text-sm truncate">{p.name}</p>
                   <p className="text-xs text-zinc-400 mt-1 truncate">{p.character}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
       ) : null}
+
+      {/* Videos / Trailers */}
+      {Array.isArray(videosRes?.results) && videosRes.results.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 md:px-10 mt-20">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            Videos <span className="text-zinc-500 text-sm font-normal">({videosRes.results.length})</span>
+          </h2>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {videosRes.results
+              .filter(v => v.site === "YouTube")
+              .slice(0, 4)
+              .map((video) => (
+                <div key={video.id} className="space-y-3">
+                  <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={`https://www.youtube.com/embed/${video.key}`}
+                      title={video.name}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    ></iframe>
+                  </div>
+                  <div className="px-2">
+                    <h3 className="font-semibold text-sm truncate">{video.name}</h3>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
+                      {video.type}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       <ReviewsSection movieId={movie.id} />
     </main>

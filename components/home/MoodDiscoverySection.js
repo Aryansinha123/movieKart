@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Sparkles, Wand2, Loader2, Play } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
+import Image from "next/image";
 
 export default function MoodDiscoverySection() {
   const [prompt, setPrompt] = useState("");
@@ -219,12 +220,24 @@ export default function MoodDiscoverySection() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => loadCategory(mood.name)}
-                className="relative overflow-hidden group rounded-xl aspect-[3/2] flex flex-col items-center justify-center text-center p-4 border border-zinc-800 bg-zinc-900/40 hover:border-purple-500/50 transition-colors"
+                className="relative overflow-hidden group rounded-2xl aspect-[16/10] flex flex-col items-center justify-center text-center border border-zinc-800 bg-zinc-900 shadow-xl"
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-                {/* Background colored glow based on index */}
+                {/* Background Image */}
+                {mood.imageUrl && (
+                  <Image
+                    src={mood.imageUrl}
+                    alt={mood.name}
+                    fill
+                    className="object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700"
+                  />
+                )}
+                
+                {/* Overlay Gradient */}
+                <div className={`absolute inset-0 z-10 bg-gradient-to-t from-black via-black/40 to-transparent group-hover:from-purple-900/40 transition-colors duration-500`} />
+                
+                {/* Subtle colored glow */}
                 <div
-                  className={`absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity bg-gradient-to-br ${
+                  className={`absolute inset-0 opacity-10 group-hover:opacity-30 transition-opacity bg-gradient-to-br z-0 ${
                     i % 3 === 0
                       ? "from-purple-500 to-indigo-500"
                       : i % 3 === 1
@@ -232,10 +245,14 @@ export default function MoodDiscoverySection() {
                       : "from-amber-500 to-orange-500"
                   }`}
                 />
-                <div className="relative z-20">
-                  <h4 className="font-bold text-white mb-1 group-hover:scale-110 transition-transform">
+                
+                <div className="relative z-20 px-4">
+                  <h4 className="font-black text-white text-lg md:text-xl tracking-tight group-hover:tracking-wider transition-all duration-500 drop-shadow-2xl">
                     {mood.name}
                   </h4>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-500 font-bold">
+                    Explore vibe
+                  </p>
                 </div>
               </motion.button>
             ))}

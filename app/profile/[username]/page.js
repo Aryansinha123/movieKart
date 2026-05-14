@@ -11,6 +11,19 @@ async function getProfile(username) {
   return getProfileData(decodeURIComponent(username));
 }
 
+export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
+  const username = decodeURIComponent(resolvedParams?.username || "");
+  const user = await getProfile(username);
+
+  if (!user || !user._id) return { title: "User not found | MovieKart" };
+
+  return {
+    title: `${user.username}'s Profile | MovieKart`,
+    description: `Check out ${user.username}'s movie collections, watchlist, and activity on MovieKart.`,
+  };
+}
+
 // Helper to fetch details for multiple movies
 async function getMoviesDetails(movieIds) {
   if (!movieIds || !Array.isArray(movieIds)) return [];

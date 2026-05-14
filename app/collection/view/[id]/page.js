@@ -50,6 +50,9 @@ export default function PublicCollectionViewPage() {
         const j = await res.json();
         if (!j.success) throw new Error(j.message || "Not found");
         setData(j.collection);
+        if (j.collection?.name) {
+          document.title = `${j.collection.name} | MovieKart`;
+        }
       } catch (e) {
         setErr(e.message || "Failed to load");
       }

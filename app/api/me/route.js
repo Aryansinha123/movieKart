@@ -28,6 +28,13 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
 
+    // Ensure field existence for existing users
+    if (!user.preferredLanguages) {
+      user.preferredLanguages = [];
+    }
+    
+    console.log(`[GET /api/me] User: ${user.username}, Preferences: ${JSON.stringify(user.preferredLanguages)}`);
+
     return NextResponse.json({ success: true, user });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -50,6 +57,15 @@ export async function PATCH(req) {
     const nextUsername =
       body.username !== undefined ? sanitizeUsername(body.username) : undefined;
     const nextAvatar = body.avatar !== undefined ? (body.avatar || "").toString() : undefined;
+    
+    let nextPreferredLanguages = undefined;
+    if (body.preferredLanguages !== undefined) {
+      if (Array.isArray(body.preferredLanguages)) {
+        nextPreferredLanguages = body.preferredLanguages.filter(l => typeof l === "string");
+      } else {
+        nextPreferredLanguages = [];
+      }
+    }
 
     if (body.username !== undefined && !nextUsername) {
       return NextResponse.json(
@@ -92,25 +108,39 @@ export async function PATCH(req) {
       }
     }
 
-    const updates = {};
-    if (nextUsername !== undefined) updates.username = nextUsername;
-    if (nextAvatar !== undefined) updates.avatar = nextAvatar;
+    const user = await User.findById(userData.id);
+    if (!user) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
 
-    const user = await User.findByIdAndUpdate(userData.id, updates, { new: true })
-      .select("-password")
-      .lean();
+    if (nextUsername !== undefined) user.username = nextUsername;
+    if (nextAvatar !== undefined) user.avatar = nextAvatar;
+    if (nextPreferredLanguages !== undefined) {
+      console.log(`[PATCH /api/me] Setting Preferences for ${user.username}:`, nextPreferredLanguages);
+      user.preferredLanguages = nextPreferredLanguages;
+      user.markModified("preferredLanguages");
+    }
+
+    await user.save();
+    console.log(`[PATCH /api/me] User ${user.username} saved successfully.`);
+
+    const sanitizedUser = user.toObject();
+    delete sanitizedUser.password;
+    
+    // Safety check for response
+    if (!sanitizedUser.preferredLanguages) sanitizedUser.preferredLanguages = [];
 
     const token = jwt.sign(
       {
-        id: user._id,
-        username: user.username,
-        email: user.email,
+        id: sanitizedUser._id,
+        username: sanitizedUser.username,
+        email: sanitizedUser.email,
       },
       process.env.NEXTAUTH_SECRET,
       { expiresIn: "7d" }
     );
 
-    return NextResponse.json({ success: true, user, token });
+    return NextResponse.json({ success: true, user: sanitizedUser, token });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

@@ -24,6 +24,8 @@ import HeroSection from "@/components/movie/HeroSection";
 import TrendingMovies from "@/components/movie/TrendingMovies";
 import SearchBar from "@/components/movie/SearchBar";
 import MovieCard from "@/components/movie/MovieCard";
+import NewReleases from "@/components/movie/NewReleases";
+import UpcomingMovies from "@/components/movie/UpcomingMovies";
 import MoodDiscoverySection from "@/components/home/MoodDiscoverySection";
 import toast from "react-hot-toast";
 
@@ -736,6 +738,8 @@ export default function Home() {
     const hasToken = !!getToken();
     setIsAuthenticated(hasToken);
     
+    document.title = "MovieKart | Discover Your Next Favorite Film";
+
     if (hasToken) {
       fetchRecommendations();
       fetchTasteProfile();
@@ -794,6 +798,10 @@ export default function Home() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
           <HeroSection />
           <SearchBar />
+          <div className="max-w-[1600px] w-full mx-auto px-6">
+            <NewReleases />
+            <UpcomingMovies />
+          </div>
           <TrendingMovies />
         </motion.div>
       </main>
@@ -886,6 +894,20 @@ export default function Home() {
                 <div className="py-12 relative z-10">
                   <SearchBar />
                 </div>
+                
+                {/* Recommended For You */}
+                <div>
+                  <SectionHeader
+                    icon={Sparkles}
+                    title="Recommended For You"
+                    subtitle="Curated picks based on your taste profile"
+                    gradient="bg-gradient-to-br from-purple-500 to-fuchsia-500"
+                  />
+                  <MovieRow movies={data?.recommended} />
+                </div>
+
+                <NewReleases />
+                <UpcomingMovies />
 
                 {/* Because You Watched */}
                 {data?.becauseYouWatched?.map((section) => (
@@ -900,16 +922,6 @@ export default function Home() {
                   </div>
                 ))}
 
-                {/* Recommended For You */}
-                <div>
-                  <SectionHeader
-                    icon={Sparkles}
-                    title="Recommended For You"
-                    subtitle="Curated picks based on your taste profile"
-                    gradient="bg-gradient-to-br from-purple-500 to-fuchsia-500"
-                  />
-                  <MovieRow movies={data?.recommended} />
-                </div>
 
 
 
@@ -989,7 +1001,7 @@ export default function Home() {
         )}
 
         {/* Global Trending Movies (Always Visible) */}
-        <div className="mt-20 pt-10 border-t border-zinc-800/50">
+        <div className="mt-20 pt-10 border-t border-zinc-800/50 space-y-4">
           <TrendingMovies />
         </div>
       </div>

@@ -10,7 +10,7 @@ export async function POST(req) {
 
     const body = await req.json();
 
-    const { username, email, password } = body;
+    const { username, email, password, preferredLanguages } = body;
 
     const existingUser = await User.findOne({
       $or: [{ email }, { username }],
@@ -29,6 +29,7 @@ export async function POST(req) {
       username,
       email,
       password: hashedPassword,
+      preferredLanguages: preferredLanguages || [],
     });
 
     return NextResponse.json({

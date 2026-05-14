@@ -134,6 +134,34 @@ export default function ProfileHeaderClient({ user }) {
           </p>
         ) : null}
 
+        {Array.isArray(user.preferredLanguages) && user.preferredLanguages.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest self-center mr-1">
+              Prefers:
+            </span>
+            {user.preferredLanguages.map((langCode) => {
+              const names = {
+                hi: "Hindi",
+                en: "English",
+                te: "Telugu",
+                ta: "Tamil",
+                ml: "Malayalam",
+                kn: "Kannada",
+                ko: "Korean",
+                ja: "Japanese",
+              };
+              return (
+                <span 
+                  key={langCode}
+                  className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] font-bold text-zinc-300 border border-zinc-700"
+                >
+                  {names[langCode] || langCode.toUpperCase()}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-6 md:gap-10 mt-6 md:mt-8">
           <div className="flex flex-col items-center md:items-start">
             <span className="text-xl md:text-2xl font-bold text-white">{user.watchedMovies?.length || 0}</span>

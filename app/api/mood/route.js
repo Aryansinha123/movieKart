@@ -299,6 +299,7 @@ export async function GET() {
     moods: Object.keys(MOODS).map(key => ({
       name: key,
       description: MOODS[key].description,
+      imageUrl: MOODS[key].imageUrl,
     }))
   });
 }

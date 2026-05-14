@@ -120,6 +120,7 @@ export async function GET(req) {
             highlyRatedMovieIds,
             collectionMovieIds,
             socialSignalMovieIds,
+            preferredLanguages: user.preferredLanguages || [],
           }
         );
       } else {
