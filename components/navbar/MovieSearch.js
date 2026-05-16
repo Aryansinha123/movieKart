@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Film } from "lucide-react";
 import Image from "next/image";
+import { getMovieUrl } from "@/utils/slugify";
 
 export default function MovieSearch() {
   const router = useRouter();
@@ -56,11 +57,11 @@ export default function MovieSearch() {
     };
   }, [query]);
 
-  function handleSelect(id) {
+  function handleSelect(m) {
     setOpen(false);
     setQuery("");
     setResults([]);
-    router.push(`/movie/${id}`);
+    router.push(getMovieUrl(m.id, m.title));
   }
 
   return (
@@ -93,7 +94,7 @@ export default function MovieSearch() {
             {results.map((m) => (
               <button
                 key={m.id}
-                onClick={() => handleSelect(m.id)}
+                onClick={() => handleSelect(m)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left"
               >
                 <div className="w-9 h-12 rounded-sm bg-zinc-800 flex items-center justify-center text-xs text-white overflow-hidden flex-shrink-0">

@@ -40,6 +40,8 @@ import WatchlistButton from "./WatchListButton";
 import WatchedButton from "./WatchedButton";
 import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
+import { getMovieUrl } from "@/utils/slugify";
+
 
 export default function MovieCard({ 
   movie, 
@@ -54,7 +56,8 @@ export default function MovieCard({
 
   return (
     <div className="group relative w-full rounded-xl overflow-hidden border border-zinc-800/50 bg-zinc-900/30 transition-all duration-300 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1">
-      <Link href={`/movie/${movie.id}`}>
+      <Link href={getMovieUrl(movie.id, movie.title)}>
+
         <div className="relative">
           {movie.poster_path ? (
             <Image

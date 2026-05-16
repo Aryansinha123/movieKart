@@ -109,7 +109,7 @@ export default function Navbar() {
       : "U";
 
   return (
-    <nav className={`sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300 ${
+    <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300 ${
       isScrolled 
         ? "bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 shadow-lg" 
         : "bg-black border-transparent"

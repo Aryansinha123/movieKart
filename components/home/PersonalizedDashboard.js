@@ -16,6 +16,7 @@ import {
   UserPlus,
   Loader2,
 } from "lucide-react";
+import { getMovieUrl } from "@/utils/slugify";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -47,7 +48,7 @@ function MovieThumb({ movie, i }) {
       transition={{ delay: i * 0.04 }}
       className="flex-shrink-0"
     >
-      <Link href={`/movie/${movie.id}`}>
+      <Link href={getMovieUrl(movie.id, movie.title)}>
         <div className="w-[120px] rounded-lg overflow-hidden border border-zinc-800/60 bg-zinc-900/40 hover:border-purple-500/30 transition-colors">
           {movie.poster_path ? (
             <Image
@@ -191,7 +192,7 @@ export default function PersonalizedDashboard() {
             {data.friendActivity.map((a) => (
               <Link
                 key={a._id}
-                href={`/movie/${a.movieId}`}
+                href={getMovieUrl(a.movieId, a.meta?.movieTitle)}
                 className="flex items-start gap-3 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-4 hover:border-cyan-500/20 transition-colors"
               >
                 <div className="mt-0.5">
@@ -260,7 +261,7 @@ export default function PersonalizedDashboard() {
           {(data.communityRecentReviews || []).map((r) => (
             <Link
               key={r._id}
-              href={`/movie/${r.movieId}`}
+              href={getMovieUrl(r.movieId, r.movie?.title)}
               className="flex gap-3 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-4 hover:border-violet-500/25"
             >
               {r.movie?.poster_path ? (

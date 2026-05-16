@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getImagePath } from "@/utils/imagePath";
 import { Star, MapPin, Cake, User, Film } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
+import { getMovieUrl } from "@/utils/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -207,7 +208,7 @@ export default async function PersonPage({ params }) {
 function PersonMovieCard({ movie }) {
   return (
     <Link 
-      href={`/movie/${movie.id}`}
+      href={getMovieUrl(movie.id, movie.title)}
       className="group relative block rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 hover:border-red-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10"
     >
       <div className="aspect-[16/9] relative overflow-hidden">

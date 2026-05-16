@@ -28,6 +28,7 @@ import NewReleases from "@/components/movie/NewReleases";
 import UpcomingMovies from "@/components/movie/UpcomingMovies";
 import MoodDiscoverySection from "@/components/home/MoodDiscoverySection";
 import toast from "react-hot-toast";
+import { getMovieUrl } from "@/utils/slugify";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -626,7 +627,7 @@ function FriendsActivityFeed() {
 
             {/* Movie preview */}
             <Link
-              href={`/movie/${activity.movieId}`}
+              href={getMovieUrl(activity.movieId, movieMap?.[activity.movieId]?.title)}
               className="mt-3 block rounded-xl border border-zinc-800/80 bg-zinc-950/40 hover:bg-zinc-900/60 transition-colors overflow-hidden group"
             >
               <div className="flex gap-4 p-4">
