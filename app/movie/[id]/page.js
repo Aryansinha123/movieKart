@@ -293,7 +293,7 @@ export default async function MoviePage({ params }) {
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Backdrop */}
-      <div className="relative h-[70vh] -mt-20">
+      <div className="relative h-[70vh]">
 
         {movie.backdrop_path && (
           <Image
