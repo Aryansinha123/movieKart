@@ -1,4 +1,5 @@
-// import Image from "next/image";
+// import Image from "next/image"; 
+
 // import { getImagePath } from "@/utils/imagePath";
 
 // export default function MovieCard({ movie }) {
@@ -32,7 +33,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Bookmark, Check, ListPlus, Eye } from "lucide-react";
+import { Star, Bookmark, Check, ListPlus, Eye, Trash2 } from "lucide-react";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "./WatchListButton";
@@ -40,7 +41,13 @@ import WatchedButton from "./WatchedButton";
 import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
 
-export default function MovieCard({ movie, priority = false }) {
+export default function MovieCard({ 
+  movie, 
+  priority = false, 
+  mode = "default", // "default", "watchlist", "watched"
+  onRemove,
+  onWatchedSuccess
+}) {
   const { watchedIds, watchlistIds } = useUserMovies() || { watchedIds: new Set(), watchlistIds: new Set() };
   const isWatched = watchedIds.has(Number(movie.id));
   const isWatchlist = watchlistIds.has(Number(movie.id));
@@ -108,19 +115,48 @@ export default function MovieCard({ movie, priority = false }) {
 
       {/* Hover Actions */}
       <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 z-20">
-        <WatchlistButton
-          movieId={movie.id}
-          className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-        >
-          <Bookmark size={18} />
-        </WatchlistButton>
+        {mode === "watchlist" ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove?.(movie.id);
+            }}
+            className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+            title="Remove from watchlist"
+          >
+            <Trash2 size={18} />
+          </button>
+        ) : (
+          <WatchlistButton
+            movieId={movie.id}
+            className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+          >
+            <Bookmark size={18} />
+          </WatchlistButton>
+        )}
         
-        <WatchedButton
-          movieId={movie.id}
-          className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-        >
-          <Check size={18} />
-        </WatchedButton>
+        {mode === "watched" ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove?.(movie.id);
+            }}
+            className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+            title="Remove from watched"
+          >
+            <Trash2 size={18} />
+          </button>
+        ) : (
+          <WatchedButton
+            movieId={movie.id}
+            onSuccess={onWatchedSuccess}
+            className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+          >
+            <Check size={18} />
+          </WatchedButton>
+        )}
 
         <CollectionPicker
           movieId={movie.id}

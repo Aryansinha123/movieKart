@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
-
 import MovieCard from "@/components/movie/MovieCard";
 import SmartFilter from "@/components/movie/SmartFilter";
 
@@ -189,18 +187,13 @@ export default function WatchedPage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {sortedMovies.map((movie, i) => (
-                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i} className="relative group">
+                <div key={movie?.id ?? movie?.tmdbId ?? movie?.movieId ?? i}>
                   <MovieCard
                     movie={movie}
                     priority={i < 2}
+                    mode="watched"
+                    onRemove={handleDelete}
                   />
-                  <button
-                    onClick={() => handleDelete(movie?.id)}
-                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                    title="Remove from watched"
-                  >
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               ))}
             </div>
