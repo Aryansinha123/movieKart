@@ -4,7 +4,7 @@ export default function HeroSection() {
   return (
     <section
       style={{ fontFamily: "'DM Sans', sans-serif" }}
-      className="relative min-h-[500px] flex flex-col items-center justify-center text-center px-8 py-16 bg-[#0a0a0a] rounded-2xl overflow-hidden"
+      className="relative min-h-[500px] flex flex-col items-center justify-center text-center px-8 pt-32 pb-16 bg-[#0a0a0a] rounded-2xl overflow-hidden -mt-20"
     >
       {/* Google Fonts */}
       <style>{`

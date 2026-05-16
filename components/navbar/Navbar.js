@@ -27,8 +27,17 @@ export default function Navbar() {
   const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +109,11 @@ export default function Navbar() {
       : "U";
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800">
+    <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300 ${
+      isScrolled 
+        ? "bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 shadow-xl" 
+        : "bg-gradient-to-b from-black/80 to-transparent border-transparent"
+    }`}>
       <Link href="/">
         <h1 className="text-xl md:text-2xl font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer">
           MovieKart
