@@ -41,6 +41,12 @@ const UserSchema = new mongoose.Schema(
       },
     ],
 
+    favorites: [
+      {
+        type: Number,
+      },
+    ],
+
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -33,11 +33,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Bookmark, Check, ListPlus, Eye, Trash2 } from "lucide-react";
+import { Star, Bookmark, Check, ListPlus, Eye, Trash2, Heart } from "lucide-react";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "./WatchListButton";
 import WatchedButton from "./WatchedButton";
+import FavoriteButton from "./FavoriteButton";
 import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
 import { getMovieUrl } from "@/utils/slugify";
@@ -46,13 +47,14 @@ import { getMovieUrl } from "@/utils/slugify";
 export default function MovieCard({ 
   movie, 
   priority = false, 
-  mode = "default", // "default", "watchlist", "watched"
+  mode = "default", // "default", "watchlist", "watched", "favorites"
   onRemove,
   onWatchedSuccess
 }) {
-  const { watchedIds, watchlistIds } = useUserMovies() || { watchedIds: new Set(), watchlistIds: new Set() };
+  const { watchedIds, watchlistIds, favoriteIds } = useUserMovies() || { watchedIds: new Set(), watchlistIds: new Set(), favoriteIds: new Set() };
   const isWatched = watchedIds.has(Number(movie.id));
   const isWatchlist = watchlistIds.has(Number(movie.id));
+  const isFavorite = favoriteIds.has(Number(movie.id));
 
   return (
     <div className="group relative w-full rounded-xl overflow-hidden border border-zinc-800/50 bg-zinc-900/30 transition-all duration-300 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10 hover:-translate-y-1">
@@ -89,6 +91,13 @@ export default function MovieCard({
               </div>
             )}
           </div>
+
+          {/* Top-Right Favorite Indicator */}
+          {isFavorite && (
+            <div className="absolute top-2.5 right-2.5 z-10 p-1.5 rounded-full bg-zinc-950/70 border border-pink-500/30 text-pink-500 shadow-md shadow-pink-500/10 backdrop-blur-md transition-all duration-300 group-hover:opacity-0 group-hover:scale-75 pointer-events-none">
+              <Heart size={14} fill="currentColor" />
+            </div>
+          )}
           
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
@@ -159,6 +168,27 @@ export default function MovieCard({
           >
             <Check size={18} />
           </WatchedButton>
+        )}
+
+        {mode === "favorites" ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemove?.(movie.id);
+            }}
+            className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+            title="Remove from favorites"
+          >
+            <Trash2 size={18} />
+          </button>
+        ) : (
+          <FavoriteButton
+            movieId={movie.id}
+            className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-pink-500 hover:border-pink-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+          >
+            <Heart size={18} />
+          </FavoriteButton>
         )}
 
         <CollectionPicker

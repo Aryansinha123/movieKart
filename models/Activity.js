@@ -23,6 +23,7 @@ const ActivitySchema = new mongoose.Schema(
         "review",            // wrote/updated a review
         "watchlist_add",     // added a movie to watchlist
         "watched_add",       // marked a movie as watched
+        "favorite_add",      // added a movie to favorites
       ],
       required: true,
       index: true,
@@ -46,4 +47,8 @@ const ActivitySchema = new mongoose.Schema(
 ActivitySchema.index({ userId: 1, createdAt: -1 });
 ActivitySchema.index({ createdAt: -1 });
 
-export default mongoose.models.Activity || mongoose.model("Activity", ActivitySchema);
+if (mongoose.models.Activity) {
+  delete mongoose.models.Activity;
+}
+
+export default mongoose.model("Activity", ActivitySchema);

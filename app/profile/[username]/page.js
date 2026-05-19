@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchMovieDetails } from "@/lib/tmdb";
 import ProfileHeaderClient from "@/components/profile/ProfileHeaderClient";
-import { FolderHeart, Clapperboard, Calendar, Star, Eye, History, Bookmark } from "lucide-react";
+import { FolderHeart, Clapperboard, Calendar, Star, Eye, History, Bookmark, Heart } from "lucide-react";
 import { getMovieUrl } from "@/utils/slugify";
 
 import { getProfileData } from "@/lib/profile";
@@ -63,6 +63,7 @@ export default async function ProfilePage(context) {
 
   const watchedMoviesDetails = await getMoviesDetails(user.watchedMovies);
   const watchlistDetails = await getMoviesDetails(user.watchlist);
+  const favoritesDetails = await getMoviesDetails(user.favorites);
   const collectionThumbs = await getCollectionThumbs(user.publicCollections || []);
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
@@ -153,6 +154,45 @@ export default async function ProfilePage(context) {
               )}
             </div>
 
+            {/* Favorites */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-pink-500/10 text-pink-500">
+                  <Heart size={20} />
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold">Favorites</h2>
+                <span className="text-zinc-500 text-xs md:text-sm ml-auto">Latest 10</span>
+              </div>
+              {favoritesDetails.length > 0 ? (
+                <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
+                  {favoritesDetails.map((m) => (
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-pink-500/30">
+                      {m.poster_path ? (
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
+                          alt={m.title}
+                          width={160}
+                          height={240}
+                          className="w-full h-[210px] md:h-[240px] object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-[140px] h-[210px] bg-zinc-800 flex items-center justify-center text-center p-2 text-sm text-zinc-500">
+                          {m.title}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                        <span className="text-xs font-bold text-white truncate">{m.title}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-zinc-900/20 rounded-2xl p-8 border border-zinc-800/50 text-zinc-500 text-center">
+                  No favorite movies yet.
+                </div>
+              )}
+            </div>
+
             {/* Public collections */}
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -228,6 +268,7 @@ export default async function ProfilePage(context) {
                       {activity.type === "review" && "wrote a review"}
                       {activity.type === "watchlist_add" && "added a movie to watchlist"}
                       {activity.type === "watched_add" && "marked a movie as watched"}
+                      {activity.type === "favorite_add" && "added a movie to favorites"}
                       
                       {activity.type === "collection_add" && activity.meta?.collectionName && (
                         <span className="font-bold text-red-400"> {activity.meta.collectionName}</span>

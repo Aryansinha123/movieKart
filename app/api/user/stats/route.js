@@ -13,13 +13,14 @@ export async function GET(req) {
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false });
 
-    const user = await User.findById(decoded.id).select("watchedMovies watchlist");
+    const user = await User.findById(decoded.id).select("watchedMovies watchlist favorites");
     if (!user) return NextResponse.json({ success: false });
 
     return NextResponse.json({
       success: true,
       watchedMovies: user.watchedMovies || [],
       watchlist: user.watchlist || [],
+      favorites: user.favorites || [],
     });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message });

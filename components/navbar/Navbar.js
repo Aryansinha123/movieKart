@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings, Heart } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 import MovieSearch from "@/components/navbar/MovieSearch";
@@ -109,15 +109,24 @@ export default function Navbar() {
       : "U";
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300 ${
+    <nav className={`sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 transition-all duration-300 ${
       isScrolled 
         ? "bg-zinc-900/90 backdrop-blur-md border-b border-zinc-800 shadow-lg" 
-        : "bg-black border-transparent"
+        : "bg-black/60 backdrop-blur-sm border-transparent"
     }`}>
-      <Link href="/">
-        <h1 className="text-xl md:text-2xl font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer">
+      <Link href="/" className="flex items-center">
+        {/* Desktop: Show text name */}
+        <h1 className="hidden md:block text-2xl font-bold text-red-500 hover:text-red-400 transition-colors cursor-pointer">
           MovieKart
         </h1>
+        {/* Mobile: Show logo icon */}
+        <Image
+          src="/icon.png"
+          alt="MovieKart"
+          width={36}
+          height={36}
+          className="md:hidden rounded-lg shadow-md shadow-red-500/20 hover:shadow-red-500/40 transition-shadow"
+        />
       </Link>
 
       {/* Desktop Navigation */}
@@ -159,6 +168,15 @@ export default function Navbar() {
           >
             <Eye size={16} />
             Watched
+          </Link>
+        )}
+        {isMounted && user && (
+          <Link
+            href="/favorites"
+            className="text-zinc-300 hover:text-white transition-colors flex items-center gap-2"
+          >
+            <Heart size={16} />
+            Favorites
           </Link>
         )}
 
@@ -228,6 +246,14 @@ export default function Navbar() {
                     Watched
                   </Link>
                   <Link
+                    href="/favorites"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                  >
+                    <Heart size={16} />
+                    Favorites
+                  </Link>
+                  <Link
                     href={`/profile/${user?.username || "user"}`}
                     onClick={() => setDropdownOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
@@ -285,6 +311,24 @@ export default function Navbar() {
           ref={mobileMenuRef}
           className="absolute top-full left-0 right-0 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800 p-6 flex flex-col gap-6 lg:hidden animate-in slide-in-from-top-4 duration-300 z-50 shadow-2xl"
         >
+          {/* Brand name at top of mobile menu */}
+          <Link
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 pb-4 border-b border-zinc-800"
+          >
+            <Image
+              src="/icon.png"
+              alt="MovieKart"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
+            <span className="text-xl font-bold bg-gradient-to-r from-red-500 to-rose-400 bg-clip-text text-transparent">
+              MovieKart
+            </span>
+          </Link>
+
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
@@ -367,6 +411,15 @@ export default function Navbar() {
               >
                 <Eye size={20} className="text-zinc-400" />
                 Watched
+              </Link>
+              
+              <Link
+                href="/favorites"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
+              >
+                <Heart size={20} className="text-pink-400" />
+                Favorites
               </Link>
             </>
           )}

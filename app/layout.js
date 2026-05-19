@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col bg-black">
         <UserProvider>
           <Navbar />
-          <main className="flex-1 pt-20">
+          <main className="flex-1">
             {children}
           </main>
           <Footer />

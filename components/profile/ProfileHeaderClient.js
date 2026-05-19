@@ -172,6 +172,10 @@ export default function ProfileHeaderClient({ user }) {
             <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Watchlist</span>
           </div>
           <div className="flex flex-col items-center md:items-start">
+            <span className="text-xl md:text-2xl font-bold text-white">{user.favorites?.length || 0}</span>
+            <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Favorites</span>
+          </div>
+          <div className="flex flex-col items-center md:items-start">
             <span className="text-xl md:text-2xl font-bold text-white">{followersCount}</span>
             <span className="text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 font-bold">Followers</span>
           </div>

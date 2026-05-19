@@ -89,9 +89,10 @@ import Link from "next/link";
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "@/components/movie/WatchListButton";
 import WatchedButton from "@/components/movie/WatchedButton";
+import FavoriteButton from "@/components/movie/FavoriteButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
-import { Star, Check } from "lucide-react";
+import { Star, Check, Heart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -429,6 +430,13 @@ export default async function MoviePage({ params }) {
                   <Check size={18} />
                   Watched
                 </WatchedButton>
+                <FavoriteButton
+                  movieId={movie.id}
+                  className="bg-pink-600/90 hover:bg-pink-600 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 border border-pink-500/30 shadow-lg shadow-pink-500/10"
+                >
+                  <Heart size={18} />
+                  Favorite
+                </FavoriteButton>
               </div>
             </div>
           </div>
