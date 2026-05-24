@@ -80,7 +80,7 @@ export default function UpcomingMovies() {
         >
           {movies.map((movie) => (
             <div key={movie.id} className="w-[45vw] sm:w-[240px] md:w-[260px] flex-shrink-0 snap-start">
-              <MovieCard movie={movie} />
+              <MovieCard movie={movie} showFullReleaseDate={true} />
             </div>
           ))}
         </div>

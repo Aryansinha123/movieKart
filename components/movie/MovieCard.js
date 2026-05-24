@@ -33,7 +33,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Bookmark, Check, ListPlus, Eye, Trash2, Heart } from "lucide-react";
+import { Star, Bookmark, Check, ListPlus, Eye, Trash2, Heart, Calendar } from "lucide-react";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "./WatchListButton";
@@ -43,13 +43,24 @@ import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
 import { getMovieUrl } from "@/utils/slugify";
 
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+  const [year, month, day] = parts;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = months[monthIndex] || month;
+  return `${monthName} ${parseInt(day, 10)}, ${year}`;
+};
 
 export default function MovieCard({ 
   movie, 
   priority = false, 
   mode = "default", // "default", "watchlist", "watched", "favorites"
   onRemove,
-  onWatchedSuccess
+  onWatchedSuccess,
+  showFullReleaseDate = false
 }) {
   const { watchedIds, watchlistIds, favoriteIds } = useUserMovies() || { watchedIds: new Set(), watchlistIds: new Set(), favoriteIds: new Set() };
   const isWatched = watchedIds.has(Number(movie.id));
@@ -115,7 +126,12 @@ export default function MovieCard({
                   {Number(movie.vote_average).toFixed(1)}
                 </span>
               ) : null}
-              {movie.release_date ? (
+              {showFullReleaseDate && movie.release_date ? (
+                <span className="text-xs font-semibold text-cyan-400 flex items-center gap-1 bg-cyan-950/40 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                  <Calendar size={12} className="stroke-[2.5px]" />
+                  {formatDate(movie.release_date)}
+                </span>
+              ) : movie.release_date ? (
                 <span className="text-xs font-medium text-zinc-300 bg-zinc-800/80 px-2 py-0.5 rounded-full">
                   {movie.release_date.substring(0, 4)}
                 </span>
