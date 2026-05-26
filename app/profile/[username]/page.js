@@ -12,16 +12,47 @@ async function getProfile(username) {
   return getProfileData(decodeURIComponent(username));
 }
 
+import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
+
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const username = decodeURIComponent(resolvedParams?.username || "");
   const user = await getProfile(username);
 
-  if (!user || !user._id) return { title: "User not found | MovieKart" };
+  if (!user || !user._id) return { title: "User not found" };
+
+  const description = `Check out ${user.username}'s movie profile on ${SITE_NAME} — ${user.watchedMovies?.length || 0} movies watched, ${user.favorites?.length || 0} favorites, and curated collections.`;
+  const pageUrl = `${SITE_URL}/profile/${encodeURIComponent(user.username)}`;
 
   return {
-    title: `${user.username}'s Profile | MovieKart`,
-    description: `Check out ${user.username}'s movie collections, watchlist, and activity on MovieKart.`,
+    title: `${user.username}'s Profile`,
+    description,
+    openGraph: {
+      type: "profile",
+      title: `${user.username}'s Profile | ${SITE_NAME}`,
+      description,
+      url: pageUrl,
+      siteName: SITE_NAME,
+      ...(user.avatar && {
+        images: [
+          {
+            url: user.avatar,
+            width: 400,
+            height: 400,
+            alt: `${user.username}'s avatar`,
+          },
+        ],
+      }),
+    },
+    twitter: {
+      card: "summary",
+      title: `${user.username}'s Profile | ${SITE_NAME}`,
+      description,
+      ...(user.avatar && { images: [user.avatar] }),
+    },
+    alternates: {
+      canonical: pageUrl,
+    },
   };
 }
 

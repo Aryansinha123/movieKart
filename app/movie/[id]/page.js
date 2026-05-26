@@ -240,16 +240,65 @@ async function getWatchProviders(idStr) {
   }
 }
 
+import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
+import JsonLd from "@/components/JsonLd";
+
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const movie = id ? await getMovie(id) : null;
 
-  if (!movie) return { title: "Movie not found | MovieKart" };
+  if (!movie) return { title: "Movie not found" };
+
+  const year = movie.release_date?.substring(0, 4) || "TBA";
+  const title = `${movie.title} (${year})`;
+  const description =
+    movie.overview?.substring(0, 160) ||
+    `Watch ${movie.title} — discover details, trailers, cast, and where to stream on MovieKart.`;
+  const posterUrl = movie.poster_path
+    ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+    : undefined;
+  const pageUrl = `${SITE_URL}/movie/${id}`;
 
   return {
-    title: `${movie.title} (${movie.release_date?.substring(0, 4) || "TBA"}) | MovieKart`,
-    description: movie.overview,
+    title,
+    description,
+    keywords: [
+      movie.title,
+      ...(movie.genres?.map((g) => g.name) || []),
+      "movie",
+      "watch",
+      "stream",
+      "review",
+      SITE_NAME,
+    ],
+    openGraph: {
+      type: "video.movie",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      url: pageUrl,
+      siteName: SITE_NAME,
+      ...(posterUrl && {
+        images: [
+          {
+            url: posterUrl,
+            width: 780,
+            height: 1170,
+            alt: `${movie.title} poster`,
+          },
+        ],
+      }),
+      releaseDate: movie.release_date,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      ...(posterUrl && { images: [posterUrl] }),
+    },
+    alternates: {
+      canonical: pageUrl,
+    },
   };
 }
 
@@ -291,8 +340,47 @@ export default async function MoviePage({ params }) {
     );
   }
 
+  const director = credits?.crew?.find((c) => c.job === "Director");
+  const topActors = credits?.cast?.slice(0, 5) || [];
+
+  const movieJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    name: movie.title,
+    description: movie.overview,
+    datePublished: movie.release_date,
+    genre: movie.genres?.map((g) => g.name),
+    ...(movie.poster_path && {
+      image: `https://image.tmdb.org/t/p/w780${movie.poster_path}`,
+    }),
+    ...(director && {
+      director: {
+        "@type": "Person",
+        name: director.name,
+        url: `${SITE_URL}/person/${director.id}`,
+      },
+    }),
+    ...(topActors.length > 0 && {
+      actor: topActors.map((a) => ({
+        "@type": "Person",
+        name: a.name,
+        url: `${SITE_URL}/person/${a.id}`,
+      })),
+    }),
+    ...(movie.vote_average > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: movie.vote_average?.toFixed(1),
+        bestRating: 10,
+        ratingCount: movie.vote_count || 0,
+      },
+    }),
+    url: `${SITE_URL}/movie/${id}`,
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
+      <JsonLd data={movieJsonLd} />
       {/* Backdrop */}
       <div className="relative h-[70vh]">
 

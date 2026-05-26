@@ -738,8 +738,6 @@ export default function Home() {
     setMounted(true);
     const hasToken = !!getToken();
     setIsAuthenticated(hasToken);
-    
-    document.title = "MovieKart | Discover Your Next Favorite Film";
 
     if (hasToken) {
       fetchRecommendations();

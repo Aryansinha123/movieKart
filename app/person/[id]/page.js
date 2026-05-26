@@ -62,16 +62,61 @@ async function getCredits(id) {
   }
 }
 
+import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
+import JsonLd from "@/components/JsonLd";
+
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const person = id ? await getPerson(id) : null;
 
-  if (!person) return { title: "Person not found | MovieKart" };
+  if (!person) return { title: "Person not found" };
+
+  const description =
+    person.biography?.substring(0, 160) ||
+    `Explore ${person.name}'s filmography, biography, and career on MovieKart.`;
+  const profileImageUrl = person.profile_path
+    ? `https://image.tmdb.org/t/p/w780${person.profile_path}`
+    : undefined;
+  const pageUrl = `${SITE_URL}/person/${id}`;
 
   return {
-    title: `${person.name} | MovieKart`,
-    description: person.biography?.substring(0, 160),
+    title: person.name,
+    description,
+    keywords: [
+      person.name,
+      person.known_for_department,
+      "actor",
+      "director",
+      "filmography",
+      SITE_NAME,
+    ].filter(Boolean),
+    openGraph: {
+      type: "profile",
+      title: `${person.name} | ${SITE_NAME}`,
+      description,
+      url: pageUrl,
+      siteName: SITE_NAME,
+      ...(profileImageUrl && {
+        images: [
+          {
+            url: profileImageUrl,
+            width: 780,
+            height: 1170,
+            alt: person.name,
+          },
+        ],
+      }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${person.name} | ${SITE_NAME}`,
+      description,
+      ...(profileImageUrl && { images: [profileImageUrl] }),
+    },
+    alternates: {
+      canonical: pageUrl,
+    },
   };
 }
 
@@ -98,8 +143,23 @@ export default async function PersonPage({ params }) {
     ?.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
     ?.slice(0, 18) || [];
 
+  const personJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: person.name,
+    ...(person.biography && { description: person.biography.substring(0, 300) }),
+    ...(person.birthday && { birthDate: person.birthday }),
+    ...(person.place_of_birth && { birthPlace: person.place_of_birth }),
+    ...(person.known_for_department && { jobTitle: person.known_for_department }),
+    ...(person.profile_path && {
+      image: `https://image.tmdb.org/t/p/w780${person.profile_path}`,
+    }),
+    url: `${SITE_URL}/person/${id}`,
+  };
+
   return (
     <main className="min-h-screen bg-black text-white pb-20">
+      <JsonLd data={personJsonLd} />
       {/* Header / Backdrop Area */}
       <div className="relative h-[40vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-red-600/20 to-black z-0" />
