@@ -93,7 +93,7 @@ import FavoriteButton from "@/components/movie/FavoriteButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
 import { Star, Check, Heart } from "lucide-react";
-import { getPersonUrl } from "@/utils/slugify";
+import { getPersonUrl, getMovieUrl } from "@/utils/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +162,32 @@ async function getMovie(idStr) {
     };
   } catch (err) {
     console.error(`Failed to fetch movie ${idStr}:`, err?.message || err);
+    return null;
+  }
+}
+
+async function getMovieIdBySlug(slug) {
+  if (!process.env.TMDB_API_KEY) return null;
+  try {
+    const query = slug.replace(/-/g, " ");
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(query)}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      const match = data.results.find(item => item.media_type === "movie" || item.media_type === "tv");
+      if (match) {
+        return match.media_type === "tv" ? -match.id : match.id;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error(`Failed to search movie by slug ${slug}:`, err);
     return null;
   }
 }
@@ -246,7 +272,15 @@ import JsonLd from "@/components/JsonLd";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id;
+  const rawId = resolvedParams?.id;
+  let id = null;
+  if (rawId) {
+    if (/^-?\d+/.test(rawId)) {
+      id = parseInt(rawId, 10);
+    } else {
+      id = await getMovieIdBySlug(rawId);
+    }
+  }
   const movie = id ? await getMovie(id) : null;
 
   if (!movie) return { title: "Movie not found" };
@@ -259,7 +293,7 @@ export async function generateMetadata({ params }) {
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
     : undefined;
-  const pageUrl = `${SITE_URL}/movie/${id}`;
+  const pageUrl = movie ? `${SITE_URL}${getMovieUrl(movie.id, movie.title)}` : `${SITE_URL}/movie/${rawId}`;
 
   return {
     title,
@@ -305,7 +339,15 @@ export async function generateMetadata({ params }) {
 
 export default async function MoviePage({ params }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id;
+  const rawId = resolvedParams?.id;
+  let id = null;
+  if (rawId) {
+    if (/^-?\d+/.test(rawId)) {
+      id = parseInt(rawId, 10);
+    } else {
+      id = await getMovieIdBySlug(rawId);
+    }
+  }
   const movie = id ? await getMovie(id) : null;
   const credits = id ? await getCredits(id) : null;
   const watchProvidersRes = id ? await getWatchProviders(id) : null;

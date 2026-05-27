@@ -11,10 +11,10 @@ export function slugify(text) {
 
 export function getMovieUrl(id, title) {
   if (!title) return `/movie/${id}`;
-  return `/movie/${id}-${slugify(title)}`;
+  return `/movie/${slugify(title)}`;
 }
 
 export function getPersonUrl(id, name) {
-  if (!name) return `/person/${id}`;
-  return `/person/${slugify(name)}`;
+  if (!name) return `/${id}`;
+  return `/${slugify(name)}`;
 }

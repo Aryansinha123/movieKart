@@ -109,7 +109,7 @@ export async function generateMetadata({ params }) {
   const profileImageUrl = person.profile_path
     ? `https://image.tmdb.org/t/p/w780${person.profile_path}`
     : undefined;
-  const pageUrl = person ? `${SITE_URL}${getPersonUrl(id, person.name)}` : `${SITE_URL}/person/${rawId}`;
+  const pageUrl = person ? `${SITE_URL}${getPersonUrl(id, person.name)}` : `${SITE_URL}/${rawId}`;
 
   return {
     title: person.name,
