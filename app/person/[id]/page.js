@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getImagePath } from "@/utils/imagePath";
 import { Star, MapPin, Cake, User, Film } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
-import { getMovieUrl } from "@/utils/slugify";
+import { getMovieUrl, getPersonUrl } from "@/utils/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -62,12 +62,43 @@ async function getCredits(id) {
   }
 }
 
+async function getPersonIdByName(nameSlug) {
+  if (!process.env.TMDB_API_KEY) return null;
+  try {
+    const query = nameSlug.replace(/-/g, " ");
+    const res = await fetchWithRetry(`https://api.themoviedb.org/3/search/person?query=${encodeURIComponent(query)}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        accept: "application/json",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      return data.results[0].id;
+    }
+    return null;
+  } catch (err) {
+    console.error(`Failed to search person by name ${nameSlug}:`, err);
+    return null;
+  }
+}
+
 import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
 import JsonLd from "@/components/JsonLd";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id;
+  const rawId = resolvedParams?.id;
+  let id = null;
+  if (rawId) {
+    if (/^\d+$/.test(rawId)) {
+      id = parseInt(rawId, 10);
+    } else {
+      id = await getPersonIdByName(rawId);
+    }
+  }
   const person = id ? await getPerson(id) : null;
 
   if (!person) return { title: "Person not found" };
@@ -78,7 +109,7 @@ export async function generateMetadata({ params }) {
   const profileImageUrl = person.profile_path
     ? `https://image.tmdb.org/t/p/w780${person.profile_path}`
     : undefined;
-  const pageUrl = `${SITE_URL}/person/${id}`;
+  const pageUrl = person ? `${SITE_URL}${getPersonUrl(id, person.name)}` : `${SITE_URL}/person/${rawId}`;
 
   return {
     title: person.name,
@@ -122,7 +153,15 @@ export async function generateMetadata({ params }) {
 
 export default async function PersonPage({ params }) {
   const resolvedParams = await params;
-  const id = resolvedParams?.id;
+  const rawId = resolvedParams?.id;
+  let id = null;
+  if (rawId) {
+    if (/^\d+$/.test(rawId)) {
+      id = parseInt(rawId, 10);
+    } else {
+      id = await getPersonIdByName(rawId);
+    }
+  }
   const person = id ? await getPerson(id) : null;
   const credits = id ? await getCredits(id) : null;
 
@@ -154,7 +193,7 @@ export default async function PersonPage({ params }) {
     ...(person.profile_path && {
       image: `https://image.tmdb.org/t/p/w780${person.profile_path}`,
     }),
-    url: `${SITE_URL}/person/${id}`,
+    url: `${SITE_URL}${getPersonUrl(id, person.name)}`,
   };
 
   return (

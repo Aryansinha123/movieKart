@@ -93,6 +93,7 @@ import FavoriteButton from "@/components/movie/FavoriteButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
 import { Star, Check, Heart } from "lucide-react";
+import { getPersonUrl } from "@/utils/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -357,14 +358,14 @@ export default async function MoviePage({ params }) {
       director: {
         "@type": "Person",
         name: director.name,
-        url: `${SITE_URL}/person/${director.id}`,
+        url: `${SITE_URL}${getPersonUrl(director.id, director.name)}`,
       },
     }),
     ...(topActors.length > 0 && {
       actor: topActors.map((a) => ({
         "@type": "Person",
         name: a.name,
-        url: `${SITE_URL}/person/${a.id}`,
+        url: `${SITE_URL}${getPersonUrl(a.id, a.name)}`,
       })),
     }),
     ...(movie.vote_average > 0 && {
@@ -382,7 +383,7 @@ export default async function MoviePage({ params }) {
     <main className="min-h-screen bg-black text-white">
       <JsonLd data={movieJsonLd} />
       {/* Backdrop */}
-      <div className="relative -mt-[72px] pt-[72px] h-[calc(70vh+72px)]">
+      <div className="relative h-[70vh] overflow-hidden">
 
         {movie.backdrop_path && (
           <Image
@@ -422,7 +423,7 @@ export default async function MoviePage({ params }) {
                 <div className="mt-4 text-sm md:text-base">
                   <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Director:</span>
                   <Link 
-                    href={`/person/${credits.crew.find(c => c.job === "Director").id}`}
+                    href={getPersonUrl(credits.crew.find(c => c.job === "Director").id, credits.crew.find(c => c.job === "Director").name)}
                     className="ml-2 text-white font-bold hover:text-red-500 transition-colors"
                   >
                     {credits.crew.find(c => c.job === "Director").name}
@@ -572,7 +573,7 @@ export default async function MoviePage({ params }) {
             {credits.cast.slice(0, 12).map((p) => (
               <Link
                 key={p.cast_id ?? p.credit_id ?? p.id}
-                href={`/person/${p.id}`}
+                href={getPersonUrl(p.id, p.name)}
                 className="rounded-xl border border-zinc-800 bg-zinc-900/40 overflow-hidden hover:border-red-500/50 transition-colors group"
               >
                 {p.profile_path ? (

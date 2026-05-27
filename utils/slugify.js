@@ -13,3 +13,8 @@ export function getMovieUrl(id, title) {
   if (!title) return `/movie/${id}`;
   return `/movie/${id}-${slugify(title)}`;
 }
+
+export function getPersonUrl(id, name) {
+  if (!name) return `/person/${id}`;
+  return `/person/${slugify(name)}`;
+}

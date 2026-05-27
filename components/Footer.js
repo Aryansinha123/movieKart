@@ -1,6 +1,19 @@
+import { execSync } from "child_process";
 import Link from "next/link";
 
 export default function Footer() {
+  let lastUpdated = "";
+  try {
+    lastUpdated = execSync('git log -1 --format="%cd"').toString().trim();
+  } catch (err) {
+    lastUpdated = new Date().toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
   return (
     <footer className="mt-auto border-t border-zinc-900 bg-black py-10 px-6">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -19,6 +32,11 @@ export default function Footer() {
             Made with <span className="text-red-500">♥</span> by{" "}
             <span className="text-zinc-400">Aryan Sinha</span>
           </p>
+          {lastUpdated && (
+            <p className="mt-2 text-zinc-500 text-[10px] lowercase normal-case tracking-normal">
+              Last updated: {lastUpdated}
+            </p>
+          )}
         </div>
       </div>
     </footer>
