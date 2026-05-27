@@ -382,7 +382,7 @@ export default async function MoviePage({ params }) {
     <main className="min-h-screen bg-black text-white">
       <JsonLd data={movieJsonLd} />
       {/* Backdrop */}
-      <div className="relative h-[70vh]">
+      <div className="relative -mt-[72px] pt-[72px] h-[calc(70vh+72px)]">
 
         {movie.backdrop_path && (
           <Image
