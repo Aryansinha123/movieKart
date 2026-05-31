@@ -425,34 +425,39 @@ export default async function MoviePage({ params }) {
     <main className="min-h-screen bg-black text-white">
       <JsonLd data={movieJsonLd} />
       {/* Backdrop */}
-      <div className="relative h-[70vh] overflow-hidden">
-
-        {movie.backdrop_path && (
+      <div className="relative h-[35vh] sm:h-[50vh] md:h-[60vh] lg:h-[65vh] w-full overflow-hidden">
+        {movie.backdrop_path ? (
           <Image
             src={getImagePath(movie.backdrop_path)}
             alt={movie.title || "Movie Backdrop"}
             fill
-            className="object-cover opacity-40"
+            className="object-cover opacity-50"
+            priority
           />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 to-black" />
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-transparent z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent z-10" />
+      </div>
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+      {/* Movie Details Wrapper */}
+      <div className="w-full max-w-6xl mx-auto px-6 md:px-10 pb-10 -mt-20 sm:-mt-28 md:-mt-36 lg:-mt-44 relative z-20">
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          {movie.poster_path && (
+            <div className="shrink-0 w-48 sm:w-56 md:w-64 lg:w-[300px] aspect-[2/3] relative shadow-2xl shadow-black/85 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900">
+              <Image
+                src={getImagePath(movie.poster_path)}
+                alt={movie.title || "Movie Poster"}
+                fill
+                sizes="(max-width: 640px) 192px, (max-width: 768px) 224px, (max-width: 1024px) 256px, 300px"
+                className="object-cover"
+                priority
+              />
+            </div>
+          )}
 
-        <div className="absolute inset-0 flex items-end">
-          <div className="w-full max-w-6xl mx-auto px-6 md:px-10 pb-10 flex flex-col md:flex-row gap-8 items-center md:items-end">
-            {movie.poster_path && (
-              <div className="shrink-0 w-48 md:w-64 lg:w-[300px] shadow-2xl shadow-black/50 rounded-xl overflow-hidden border border-zinc-800">
-                <Image
-                  src={getImagePath(movie.poster_path)}
-                  alt={movie.title || "Movie Poster"}
-                  width={300}
-                  height={450}
-                  className="w-full h-auto"
-                />
-              </div>
-            )}
-
-            <div className="flex-1 text-center md:text-left">
+          <div className="flex-1 text-center md:text-left pt-4 md:pt-12 lg:pt-16">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight">
                 {movie.title}
               </h1>
@@ -572,7 +577,6 @@ export default async function MoviePage({ params }) {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Mobile Providers (shown below backdrop on mobile) */}
       {providers.length > 0 && (
