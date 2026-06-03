@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MONGODB_URI = "mongodb+srv://mk_user:Aryan7293@mk.bulzuqb.mongodb.net/?appName=mk";
+const MONGODB_URI =  process.env.MONGODB_URI;
 
 async function migrate() {
   try {
