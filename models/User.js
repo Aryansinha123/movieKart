@@ -65,6 +65,15 @@ const UserSchema = new mongoose.Schema(
       type: [String],
       default: [], // e.g. ["hi", "en", "te", "ta"]
     },
+
+    notInterested: [
+      {
+        movieId: { type: Number, required: true },
+        title: { type: String, required: true },
+        genres: [String],
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
   },
   {
     // Force schema update

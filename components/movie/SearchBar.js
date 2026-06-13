@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import MovieCard from "./MovieCard";
+import { useUserMovies } from "../providers/UserProvider";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
+  const { notInterestedIds } = useUserMovies() || { notInterestedIds: new Set() };
 
   useEffect(() => {
     async function searchMovies() {
@@ -31,6 +33,14 @@ export default function SearchBar() {
     return () => clearTimeout(timeout);
   }, [query]);
 
+  const seenIds = new Set();
+  const visibleMovies = movies.filter((m) => {
+    const id = Number(m.id);
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    return !notInterestedIds.has(id);
+  });
+
   return (
     <section className="py-4">
       <div className="max-w-3xl mx-auto relative group">
@@ -46,9 +56,9 @@ export default function SearchBar() {
         />
       </div>
 
-      {movies.length > 0 && (
+      {visibleMovies.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-10">
-          {movies.map((movie, idx) => (
+          {visibleMovies.map((movie, idx) => (
             <MovieCard
               key={`${movie.id}-${idx}`}
               movie={movie}

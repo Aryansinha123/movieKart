@@ -52,8 +52,9 @@ export async function GET(req) {
 
     const watchedMovieIds = user.watchedMovies || [];
     const watchlistIds = user.watchlist || [];
+    const notInterestedIds = (user.notInterested || []).map((item) => item.movieId);
     const excludeIds = new Set(
-      [...watchedMovieIds, ...watchlistIds].map((id) =>
+      [...watchedMovieIds, ...watchlistIds, ...notInterestedIds].map((id) =>
         typeof id === "number" ? id : parseInt(String(id), 10)
       )
     );
@@ -121,6 +122,7 @@ export async function GET(req) {
             collectionMovieIds,
             socialSignalMovieIds,
             preferredLanguages: user.preferredLanguages || [],
+            notInterested: user.notInterested || [],
           }
         );
       } else {

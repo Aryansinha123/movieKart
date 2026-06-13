@@ -29,6 +29,7 @@ import UpcomingMovies from "@/components/movie/UpcomingMovies";
 import MoodDiscoverySection from "@/components/home/MoodDiscoverySection";
 import toast from "react-hot-toast";
 import { getMovieUrl } from "@/utils/slugify";
+import { useUserMovies } from "@/components/providers/UserProvider";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -59,8 +60,17 @@ function SectionHeader({ icon: Icon, title, subtitle, gradient }) {
 // ─── Carousel Row ──────────────────────────
 function MovieRow({ movies }) {
   const scrollRef = useRef(null);
+  const { notInterestedIds } = useUserMovies() || { notInterestedIds: new Set() };
 
-  if (!movies || movies.length === 0) {
+  const seenIds = new Set();
+  const visibleMovies = (movies || []).filter((m) => {
+    const id = Number(m.id);
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    return !notInterestedIds.has(id);
+  });
+
+  if (!visibleMovies || visibleMovies.length === 0) {
     return (
       <div className="bg-zinc-900/30 rounded-xl p-6 border border-zinc-800/50 text-zinc-500 text-sm text-center">
         No recommendations yet. Watch more movies to unlock!
@@ -107,7 +117,7 @@ function MovieRow({ movies }) {
         className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x snap-mandatory"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {movies.map((movie) => (
+        {visibleMovies.map((movie) => (
           <div key={movie.id} className="w-[45vw] sm:w-[240px] md:w-[260px] flex-shrink-0 snap-start">
             <MovieCard movie={movie} />
           </div>

@@ -3,10 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 import MovieCard from "./MovieCard";
 import { Clock } from "lucide-react";
+import { useUserMovies } from "../providers/UserProvider";
 
 export default function UpcomingMovies() {
   const [movies, setMovies] = useState([]);
   const scrollRef = useRef(null);
+  const { notInterestedIds } = useUserMovies() || { notInterestedIds: new Set() };
 
   useEffect(() => {
     async function fetchMovies() {
@@ -51,7 +53,15 @@ export default function UpcomingMovies() {
     }
   };
 
-  if (movies.length === 0) return null;
+  const seenIds = new Set();
+  const visibleMovies = movies.filter((m) => {
+    const id = Number(m.id);
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    return !notInterestedIds.has(id);
+  });
+
+  if (visibleMovies.length === 0) return null;
 
   return (
     <section className="py-10 border-t border-zinc-800/50">
@@ -78,7 +88,7 @@ export default function UpcomingMovies() {
           className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x snap-mandatory"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {movies.map((movie) => (
+          {visibleMovies.map((movie) => (
             <div key={movie.id} className="w-[45vw] sm:w-[240px] md:w-[260px] flex-shrink-0 snap-start">
               <MovieCard movie={movie} showFullReleaseDate={true} />
             </div>

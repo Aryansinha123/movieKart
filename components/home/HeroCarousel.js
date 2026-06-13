@@ -23,16 +23,17 @@ import WatchListButton from "@/components/movie/WatchListButton";
 import { getMovieUrl } from "@/utils/slugify";
 import { getYoutubeEmbedUrl } from "@/lib/trailers";
 
-const BASE_AUTO_PLAY_MS = 6500;
+const BASE_AUTO_PLAY_MS = 12000;
 const TRAILER_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
 function getSlideDuration(slide) {
-  return slide?.trailerKey ? TRAILER_AUTO_PLAY_MS : BASE_AUTO_PLAY_MS;
+  return 12000;
 }
 
-function HeroTrailerPlayer({ videoKey, isActive }) {
+function HeroTrailerPlayer({ videoKey, isActive, onPlaying }) {
   const [embedSrc, setEmbedSrc] = useState(null);
+  const iframeRef = useRef(null);
 
   useEffect(() => {
     if (!isActive || !videoKey) {
@@ -44,11 +45,43 @@ function HeroTrailerPlayer({ videoKey, isActive }) {
     setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin));
   }, [isActive, videoKey]);
 
+  useEffect(() => {
+    if (!embedSrc) return;
+
+    const handleMessage = (event) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) {
+        return;
+      }
+
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        
+        // YouTube API playing states:
+        // - infoDelivery/initialDelivery with playerState = 1 (playing)
+        // - onStateChange with info = 1 (playing)
+        const isPlayingState = 
+          (data.event === "infoDelivery" && data.info?.playerState === 1) ||
+          (data.event === "initialDelivery" && data.info?.playerState === 1) ||
+          (data.event === "onStateChange" && data.info === 1);
+
+        if (isPlayingState) {
+          onPlaying?.();
+        }
+      } catch (e) {
+        // Ignore parser or irrelevant messages
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [embedSrc, onPlaying]);
+
   if (!embedSrc) return null;
 
   return (
     <div className="hero-trailer-wrap">
       <iframe
+        ref={iframeRef}
         src={embedSrc}
         title="Official trailer"
         className="hero-trailer-iframe"
@@ -61,38 +94,85 @@ function HeroTrailerPlayer({ videoKey, isActive }) {
   );
 }
 
-function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isActive }) {
-  return (
-    <div className="absolute inset-0">
-      {/* Trailer — no CSS transform on ancestors (YouTube embed requirement) */}
-      {slide.trailerKey && (
-        <HeroTrailerPlayer videoKey={slide.trailerKey} isActive={isActive} />
-      )}
+function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload }) {
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
 
-      {/* Backdrop image with parallax */}
+  // Trigger video showing after 2 seconds if it's the current slide
+  useEffect(() => {
+    if (!isCurrent) {
+      setShowVideo(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setShowVideo(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isCurrent]);
+
+  // Fallback timeout to ensure trailer is displayed even if postMessage fails/is blocked (e.g. by adblockers)
+  useEffect(() => {
+    if (!isCurrent || !slide.trailerKey) return;
+
+    const fallbackTimer = setTimeout(() => {
+      setVideoPlaying(true);
+    }, 4500); // 2s banner phase + 2.5s loading buffer
+
+    return () => clearTimeout(fallbackTimer);
+  }, [isCurrent, slide.trailerKey]);
+
+  // If the slide is unmounted from our stack, this handles resetting states
+  useEffect(() => {
+    if (!isCurrent) {
+      setVideoPlaying(false);
+    }
+  }, [isCurrent]);
+
+  const shouldLoadTrailer = slide.trailerKey && (isCurrent || isPreload || isOutgoing);
+  const isVideoVisible = shouldLoadTrailer && showVideo && videoPlaying;
+
+  const slideOpacity = isCurrent ? 1 : 0;
+
+  return (
+    <motion.div
+      animate={{ opacity: slideOpacity }}
+      transition={{ duration: 1.2, ease: "easeInOut" }}
+      className="absolute inset-0"
+    >
       <motion.div
-        key={slide.id}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute inset-0 z-0"
-        style={{ x: dragOffset * 0.15 }}
+        className="absolute inset-[-4%]"
+        style={{ x: parallaxX, y: parallaxY }}
+        animate={{ scale: isCurrent ? 1.05 : 1.0 }}
+        transition={{ duration: 12, ease: "linear" }}
       >
-        <motion.div className="absolute inset-[-4%]" style={{ x: parallaxX, y: parallaxY }}>
-          {slide.backdrop && (
-            <Image
-              src={slide.backdrop}
-              alt=""
-              fill
-              priority
-              className={`object-cover object-center transition-opacity duration-700 ${
-                slide.trailerKey ? "opacity-50" : "opacity-100"
-              }`}
-              sizes="100vw"
+        {/* Backdrop image */}
+        {slide.backdrop && (
+          <Image
+            src={slide.backdrop}
+            alt=""
+            fill
+            priority
+            className={`object-cover object-center transition-opacity duration-1000 ${
+              isVideoVisible ? "opacity-0" : "opacity-100"
+            }`}
+            sizes="100vw"
+          />
+        )}
+
+        {/* Video Player */}
+        {shouldLoadTrailer && (
+          <div
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              isVideoVisible ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <HeroTrailerPlayer
+              videoKey={slide.trailerKey}
+              isActive={shouldLoadTrailer}
+              onPlaying={() => setVideoPlaying(true)}
             />
-          )}
-        </motion.div>
+          </div>
+        )}
       </motion.div>
 
       {/* Cinematic overlays */}
@@ -105,7 +185,7 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isActive }) 
         }}
       />
       <div className="absolute inset-0 z-[2] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-60 pointer-events-none" />
-    </div>
+    </motion.div>
   );
 }
 
@@ -218,10 +298,19 @@ function SlideContent({ slide, isActive }) {
 export default function HeroCarousel() {
   const [slides, setSlides] = useState([]);
   const [current, setCurrent] = useState(0);
+  const [prevCurrent, setPrevCurrent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+
+  // Delayed state updater for prevCurrent to handle slide fade-out transitions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPrevCurrent(current);
+    }, 1200); // 1200ms is the duration of our slide crossfade transition
+    return () => clearTimeout(timer);
+  }, [current]);
 
   const containerRef = useRef(null);
   const dragStartX = useRef(0);
@@ -247,10 +336,22 @@ export default function HeroCarousel() {
         const res = await fetch("/api/hero", { headers });
         const data = await res.json();
         if (data?.slides?.length) {
-          setSlides(data.slides);
+          const seen = new Set();
+          const uniqueSlides = data.slides.filter((s) => {
+            if (seen.has(s.id)) return false;
+            seen.add(s.id);
+            return true;
+          });
+          setSlides(uniqueSlides);
           setLoading(false);
-          const withTrailers = await enrichSlidesWithTrailers(data.slides);
-          setSlides(withTrailers);
+          const withTrailers = await enrichSlidesWithTrailers(uniqueSlides);
+          const seen2 = new Set();
+          const finalUnique = withTrailers.filter((s) => {
+            if (seen2.has(s.id)) return false;
+            seen2.add(s.id);
+            return true;
+          });
+          setSlides(finalUnique);
           return;
         }
       } catch {
@@ -339,18 +440,39 @@ export default function HeroCarousel() {
       onPointerCancel={handlePointerUp}
       aria-label="Featured content carousel"
     >
-      <AnimatePresence mode="wait">
-        {slide && (
-          <SlideBackground
-            key={slide.id}
-            slide={slide}
-            parallaxX={parallaxX}
-            parallaxY={parallaxY}
-            dragOffset={dragOffset}
-            isActive
-          />
-        )}
-      </AnimatePresence>
+      {/* Stacked slide backgrounds with custom preloading and crossfading */}
+      <div className="absolute inset-0 z-0">
+        {slides.map((s, idx) => {
+          const isCurrent = idx === current;
+          const isOutgoing = idx === prevCurrent && !isCurrent;
+          const isPreload = idx === (current + 1) % slides.length && !isCurrent;
+
+          if (!isCurrent && !isOutgoing && !isPreload) return null;
+
+          const zIndex = isCurrent ? 10 : (isOutgoing ? 5 : 0);
+          const pointerEvents = isCurrent ? "auto" : "none";
+          const watchHref = getMovieUrl(s.id, s.title);
+
+          return (
+            <Link
+              key={s.id}
+              href={watchHref}
+              style={{ zIndex, pointerEvents }}
+              className="absolute inset-0 block cursor-pointer"
+            >
+              <SlideBackground
+                slide={s}
+                parallaxX={parallaxX}
+                parallaxY={parallaxY}
+                dragOffset={dragOffset}
+                isCurrent={isCurrent}
+                isOutgoing={isOutgoing}
+                isPreload={isPreload}
+              />
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="relative z-10 h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32">
         <AnimatePresence mode="wait">

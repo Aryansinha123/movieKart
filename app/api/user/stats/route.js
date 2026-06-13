@@ -13,7 +13,7 @@ export async function GET(req) {
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false });
 
-    const user = await User.findById(decoded.id).select("watchedMovies watchlist favorites");
+    const user = await User.findById(decoded.id).select("watchedMovies watchlist favorites notInterested");
     if (!user) return NextResponse.json({ success: false });
 
     return NextResponse.json({
@@ -21,6 +21,7 @@ export async function GET(req) {
       watchedMovies: user.watchedMovies || [],
       watchlist: user.watchlist || [],
       favorites: user.favorites || [],
+      notInterested: user.notInterested || [],
     });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import MovieCard from "./MovieCard";
+import { useUserMovies } from "../providers/UserProvider";
 
 export default function TrendingMovies() {
   const [movies, setMovies] = useState([]);
+  const { notInterestedIds } = useUserMovies() || { notInterestedIds: new Set() };
 
   useEffect(() => {
     async function fetchMovies() {
@@ -27,6 +28,14 @@ export default function TrendingMovies() {
     fetchMovies();
   }, []);
 
+  const seenIds = new Set();
+  const visibleMovies = movies.filter((m) => {
+    const id = Number(m.id);
+    if (seenIds.has(id)) return false;
+    seenIds.add(id);
+    return !notInterestedIds.has(id);
+  });
+
   return (
     <section className="py-10">
       <div className="flex items-center gap-3 mb-6">
@@ -40,7 +49,7 @@ export default function TrendingMovies() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        {movies?.map((movie) => (
+        {visibleMovies?.map((movie) => (
           <MovieCard
             key={movie.id}
             movie={movie}

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Sparkles, Wand2, Loader2, Play } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
 import Image from "next/image";
+import { useUserMovies } from "@/components/providers/UserProvider";
 
 export default function MoodDiscoverySection() {
   const [prompt, setPrompt] = useState("");
@@ -290,19 +291,30 @@ export default function MoodDiscoverySection() {
               )}
             </div>
 
-            {results.movies?.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {results.movies.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-zinc-900/30 rounded-2xl border border-zinc-800">
-                <p className="text-zinc-400 text-lg">
-                  We couldn't find an exact match, try adjusting your mood.
-                </p>
-              </div>
-            )}
+            {(() => {
+              const { notInterestedIds } = useUserMovies() || { notInterestedIds: new Set() };
+              const seenIds = new Set();
+              const visibleMovies = (results.movies || []).filter((m) => {
+                const id = Number(m.id);
+                if (seenIds.has(id)) return false;
+                seenIds.add(id);
+                return !notInterestedIds.has(id);
+              });
+              
+              return visibleMovies.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {visibleMovies.map((movie) => (
+                    <MovieCard key={movie.id} movie={movie} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-zinc-900/30 rounded-2xl border border-zinc-800">
+                  <p className="text-zinc-400 text-lg">
+                    We couldn't find an exact match, try adjusting your mood.
+                  </p>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>
