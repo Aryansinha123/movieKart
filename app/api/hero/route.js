@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getGenreLabels } from "@/lib/genres";
-import { getSportsHeroSlides } from "@/lib/sports";
 
 async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {}) {
   let lastError;
@@ -56,60 +55,51 @@ function mapSlide(item) {
 
 export async function GET() {
   try {
-    const sportsSlides = getSportsHeroSlides(2);
-    let mediaSlides = [];
-
-    if (process.env.TMDB_API_KEY) {
-      const response = await fetchWithRetry(
-        "https://api.themoviedb.org/3/trending/all/week",
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-            accept: "application/json",
-          },
-          cache: "no-store",
-        },
-        { retries: 2, timeoutMs: 8000 }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const movies = (data.results || [])
-          .filter((r) => r.media_type === "movie" || (r.title && !r.name))
-          .slice(0, 4)
-          .map(mapSlide)
-          .filter(Boolean);
-
-        const series = (data.results || [])
-          .filter((r) => r.media_type === "tv" || (!r.title && r.name))
-          .slice(0, 3)
-          .map(mapSlide)
-          .filter(Boolean);
-
-        mediaSlides = [...movies.slice(0, 2), ...series.slice(0, 2), ...movies.slice(2, 4)];
-      }
+    if (!process.env.TMDB_API_KEY) {
+      return NextResponse.json({ success: true, slides: [] });
     }
 
-    const slides = [...mediaSlides.slice(0, 4), ...sportsSlides].filter(
-      (slide) => slide?.backdrop || slide?.title
+    const response = await fetchWithRetry(
+      "https://api.themoviedb.org/3/trending/all/week",
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+          accept: "application/json",
+        },
+        cache: "no-store",
+      },
+      { retries: 2, timeoutMs: 8000 }
     );
 
-    if (slides.length === 0) {
-      return NextResponse.json({
-        success: true,
-        slides: sportsSlides,
-      });
+    if (!response.ok) {
+      return NextResponse.json(
+        { success: false, message: "TMDB request failed.", slides: [] },
+        { status: 502 }
+      );
     }
+
+    const data = await response.json();
+    const movies = (data.results || [])
+      .filter((r) => r.media_type === "movie" || (r.title && !r.name))
+      .slice(0, 4)
+      .map(mapSlide)
+      .filter(Boolean);
+
+    const series = (data.results || [])
+      .filter((r) => r.media_type === "tv" || (!r.title && r.name))
+      .slice(0, 3)
+      .map(mapSlide)
+      .filter(Boolean);
+
+    const slides = [...movies.slice(0, 2), ...series.slice(0, 2), ...movies.slice(2, 4)].filter(
+      (slide) => slide?.backdrop || slide?.title
+    );
 
     return NextResponse.json({ success: true, slides });
   } catch (error) {
     console.error("Hero API error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: error?.message || "Failed to load hero slides.",
-        slides: getSportsHeroSlides(3),
-      },
+      { success: false, message: error?.message || "Failed to load hero slides.", slides: [] },
       { status: 502 }
     );
   }

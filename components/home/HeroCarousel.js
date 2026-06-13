@@ -27,10 +27,7 @@ const SWIPE_THRESHOLD = 60;
 
 function SlideContent({ slide, isActive }) {
   const rating = slide.vote_average ? slide.vote_average.toFixed(1) : null;
-  const watchHref =
-    slide.type === "sport"
-      ? "#live-sports"
-      : getMovieUrl(slide.id, slide.title);
+  const watchHref = getMovieUrl(slide.id, slide.title);
 
   return (
     <motion.div
@@ -104,22 +101,13 @@ function SlideContent({ slide, isActive }) {
           </button>
         </Link>
 
-        {slide.type !== "sport" ? (
-          <WatchListButton
-            movieId={slide.id}
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus size={18} />
-            Add to Watchlist
-          </WatchListButton>
-        ) : (
-          <Link href="#live-sports">
-            <button className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
-              <Plus size={18} />
-              View Match Details
-            </button>
-          </Link>
-        )}
+        <WatchListButton
+          movieId={slide.id}
+          className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Plus size={18} />
+          Add to Watchlist
+        </WatchListButton>
       </div>
     </motion.div>
   );

@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 
 import HeroCarousel from "@/components/home/HeroCarousel";
-import LiveSportsSection from "@/components/home/LiveSportsSection";
 import TrendingMovies from "@/components/movie/TrendingMovies";
 import SearchBar from "@/components/movie/SearchBar";
 import MovieCard from "@/components/movie/MovieCard";
@@ -797,7 +796,6 @@ export default function Home() {
       <main className="min-h-screen bg-black text-white">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
           <HeroCarousel />
-          <LiveSportsSection />
           <div className="max-w-[1600px] w-full mx-auto px-6">
             <SearchBar />
             <NewReleases />
@@ -813,21 +811,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <HeroCarousel />
-      <LiveSportsSection />
 
       {/* Dashboard tabs */}
       <div className="relative border-b border-zinc-800/50 bg-black/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
-                Your Personalized Home
-              </h2>
-              <p className="text-zinc-500 text-sm mt-0.5">
-                AI-powered recommendations tailored to your taste
-              </p>
-            </div>
-          </div>
           <div className="w-full overflow-x-auto no-scrollbar">
             <div className="flex justify-start sm:justify-center gap-3 pb-1 min-w-max">
               {tabs.map((tab) => {
