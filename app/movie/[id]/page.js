@@ -92,6 +92,8 @@ import WatchedButton from "@/components/movie/WatchedButton";
 import FavoriteButton from "@/components/movie/FavoriteButton";
 import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
+import WhereToWatch from "@/components/movie/WhereToWatch";
+import { parseWatchProviders } from "@/lib/ottProviders";
 import { Star, Check, Heart } from "lucide-react";
 import { getPersonUrl, getMovieUrl } from "@/utils/slugify";
 
@@ -353,23 +355,6 @@ export default async function MoviePage({ params }) {
   const watchProvidersRes = id ? await getWatchProviders(id) : null;
   const videosRes = id ? await getVideos(id) : null;
 
-  let providers = [];
-  let watchLink = null;
-  if (watchProvidersRes?.results) {
-    const country =
-      watchProvidersRes.results["US"] ||
-      watchProvidersRes.results["IN"] ||
-      watchProvidersRes.results["GB"] ||
-      Object.values(watchProvidersRes.results)[0];
-    
-    if (country) {
-      providers = country.flatrate || country.rent || country.buy || [];
-      // Remove duplicates by provider_id
-      providers = Array.from(new Map(providers.map(p => [p.provider_id, p])).values());
-      watchLink = country.link;
-    }
-  }
-
   if (!movie) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
@@ -382,6 +367,8 @@ export default async function MoviePage({ params }) {
       </main>
     );
   }
+
+  const { providers, watchLink } = parseWatchProviders(watchProvidersRes, movie.title);
 
   const director = credits?.crew?.find((c) => c.job === "Director");
   const topActors = credits?.cast?.slice(0, 5) || [];
@@ -523,38 +510,7 @@ export default async function MoviePage({ params }) {
                 ))}
               </div>
 
-              {providers.length > 0 && (
-                <div className="mt-6 hidden sm:block">
-                  <h3 className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-3">Where to Watch</h3>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {providers.slice(0, 5).map((provider) => (
-                      <div
-                        key={provider.provider_id}
-                        className="w-8 h-8 md:w-10 md:h-10 rounded-lg overflow-hidden border border-zinc-700/50"
-                        title={provider.provider_name}
-                      >
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
-                          alt={provider.provider_name}
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                    {watchLink && (
-                      <a
-                        href={watchLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 bg-cyan-400/10 px-3 py-1.5 rounded-full border border-cyan-400/20"
-                      >
-                        STREAM ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
+              <WhereToWatch providers={providers} watchLink={watchLink} variant="desktop" />
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-8">
                 <WatchlistButton movieId={movie.id} />
@@ -578,38 +534,7 @@ export default async function MoviePage({ params }) {
           </div>
         </div>
 
-      {/* Mobile Providers (shown below backdrop on mobile) */}
-      {providers.length > 0 && (
-        <div className="px-6 py-8 sm:hidden border-b border-zinc-900 bg-zinc-950">
-          <h3 className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-4">Where to Watch</h3>
-          <div className="flex flex-wrap items-center gap-4">
-            {providers.slice(0, 6).map((provider) => (
-              <div
-                key={provider.provider_id}
-                className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-800"
-              >
-                <Image
-                  src={`https://image.tmdb.org/t/p/w200${provider.logo_path}`}
-                  alt={provider.provider_name}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
-            {watchLink && (
-              <a
-                href={watchLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-2 text-center text-sm font-bold text-cyan-400 bg-cyan-400/10 py-3 rounded-xl border border-cyan-400/20"
-              >
-                Stream Now ↗
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+      <WhereToWatch providers={providers} watchLink={watchLink} variant="mobile" />
 
       {/* Cast */}
       {Array.isArray(credits?.cast) && credits.cast.length > 0 ? (

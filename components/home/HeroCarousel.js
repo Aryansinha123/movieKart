@@ -21,9 +21,111 @@ import {
 } from "lucide-react";
 import WatchListButton from "@/components/movie/WatchListButton";
 import { getMovieUrl } from "@/utils/slugify";
+import { getYoutubeEmbedUrl } from "@/lib/trailers";
 
-const AUTO_PLAY_MS = 6500;
+const BASE_AUTO_PLAY_MS = 6500;
+const TRAILER_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
+
+function getSlideDuration(slide) {
+  return slide?.trailerKey ? TRAILER_AUTO_PLAY_MS : BASE_AUTO_PLAY_MS;
+}
+
+function HeroTrailerPlayer({ videoKey, isActive }) {
+  const [embedSrc, setEmbedSrc] = useState(null);
+
+  useEffect(() => {
+    if (!isActive || !videoKey) {
+      setEmbedSrc(null);
+      return;
+    }
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin));
+  }, [isActive, videoKey]);
+
+  if (!embedSrc) return null;
+
+  return (
+    <div className="hero-trailer-wrap">
+      <iframe
+        src={embedSrc}
+        title="Official trailer"
+        className="hero-trailer-iframe"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        referrerPolicy="strict-origin-when-cross-origin"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
+function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isActive }) {
+  return (
+    <div className="absolute inset-0">
+      {/* Trailer — no CSS transform on ancestors (YouTube embed requirement) */}
+      {slide.trailerKey && (
+        <HeroTrailerPlayer videoKey={slide.trailerKey} isActive={isActive} />
+      )}
+
+      {/* Backdrop image with parallax */}
+      <motion.div
+        key={slide.id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute inset-0 z-0"
+        style={{ x: dragOffset * 0.15 }}
+      >
+        <motion.div className="absolute inset-[-4%]" style={{ x: parallaxX, y: parallaxY }}>
+          {slide.backdrop && (
+            <Image
+              src={slide.backdrop}
+              alt=""
+              fill
+              priority
+              className={`object-cover object-center transition-opacity duration-700 ${
+                slide.trailerKey ? "opacity-50" : "opacity-100"
+              }`}
+              sizes="100vw"
+            />
+          )}
+        </motion.div>
+      </motion.div>
+
+      {/* Cinematic overlays */}
+      <div className="absolute inset-0 z-[2] bg-gradient-to-r from-black via-black/70 to-black/20 pointer-events-none" />
+      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#050505] via-transparent to-black/40 pointer-events-none" />
+      <div
+        className="absolute inset-0 z-[2] opacity-40 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 80% 60% at 20% 50%, ${slide.accent}33, transparent 70%)`,
+        }}
+      />
+      <div className="absolute inset-0 z-[2] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-60 pointer-events-none" />
+    </div>
+  );
+}
+
+async function enrichSlidesWithTrailers(slides) {
+  return Promise.all(
+    slides.map(async (slide) => {
+      if (slide.trailerKey) return slide;
+      try {
+        const res = await fetch(`/api/movies/${slide.id}/trailer`);
+        const data = await res.json();
+        if (data?.trailerKey) {
+          return { ...slide, trailerKey: data.trailerKey };
+        }
+      } catch {
+        // keep slide without trailer
+      }
+      return slide;
+    })
+  );
+}
 
 function SlideContent({ slide, isActive }) {
   const rating = slide.vote_average ? slide.vote_average.toFixed(1) : null;
@@ -44,7 +146,7 @@ function SlideContent({ slide, isActive }) {
           color: slide.accentSecondary || slide.accent,
         }}
       >
-        {slide.badge === "Live Now" ? (
+        {slide.badge === "Live Now" || slide.badge === "Now Playing in Theaters" ? (
           <span className="relative flex h-2 w-2">
             <span
               className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
@@ -135,10 +237,21 @@ export default function HeroCarousel() {
   useEffect(() => {
     async function loadSlides() {
       try {
-        const res = await fetch("/api/hero");
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const headers = {};
+        if (token && token !== "null" && token !== "undefined") {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const res = await fetch("/api/hero", { headers });
         const data = await res.json();
         if (data?.slides?.length) {
           setSlides(data.slides);
+          setLoading(false);
+          const withTrailers = await enrichSlidesWithTrailers(data.slides);
+          setSlides(withTrailers);
+          return;
         }
       } catch {
         setSlides([]);
@@ -160,11 +273,14 @@ export default function HeroCarousel() {
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
+  const slide = slides[current];
+  const slideDuration = slide ? getSlideDuration(slide) : BASE_AUTO_PLAY_MS;
+
   useEffect(() => {
     if (!isPlaying || isHovered || slides.length <= 1 || isDragging.current) return;
-    const timer = setInterval(next, AUTO_PLAY_MS);
+    const timer = setInterval(next, slideDuration);
     return () => clearInterval(timer);
-  }, [isPlaying, isHovered, slides.length, next, current]);
+  }, [isPlaying, isHovered, slides.length, next, current, slideDuration]);
 
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
@@ -206,8 +322,6 @@ export default function HeroCarousel() {
 
   if (slides.length === 0) return null;
 
-  const slide = slides[current];
-
   return (
     <section
       ref={containerRef}
@@ -225,51 +339,25 @@ export default function HeroCarousel() {
       onPointerCancel={handlePointerUp}
       aria-label="Featured content carousel"
     >
-      {/* Background slides */}
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={slide.id}
-          initial={{ opacity: 0, scale: 1.08 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0"
-          style={{ x: dragOffset * 0.15 }}
-        >
-          <motion.div className="absolute inset-[-4%]" style={{ x: parallaxX, y: parallaxY }}>
-            {slide.backdrop && (
-              <Image
-                src={slide.backdrop}
-                alt=""
-                fill
-                priority
-                className="object-cover object-center"
-                sizes="100vw"
-              />
-            )}
-          </motion.div>
-
-          {/* Cinematic overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/75 to-black/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/40" />
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              background: `radial-gradient(ellipse 80% 60% at 20% 50%, ${slide.accent}33, transparent 70%)`,
-            }}
+      <AnimatePresence mode="wait">
+        {slide && (
+          <SlideBackground
+            key={slide.id}
+            slide={slide}
+            parallaxX={parallaxX}
+            parallaxY={parallaxY}
+            dragOffset={dragOffset}
+            isActive
           />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-60" />
-        </motion.div>
+        )}
       </AnimatePresence>
 
-      {/* Content */}
       <div className="relative z-10 h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32">
         <AnimatePresence mode="wait">
           <SlideContent key={slide.id} slide={slide} isActive />
         </AnimatePresence>
       </div>
 
-      {/* Animated indicators */}
       <div className="absolute bottom-24 md:bottom-28 left-6 md:left-10 z-30 flex items-center gap-2">
         {slides.map((s, i) => (
           <button
@@ -288,13 +376,15 @@ export default function HeroCarousel() {
                 width: i === current ? "100%" : "0%",
                 opacity: i === current ? 1 : 0.4,
               }}
-              transition={{ duration: i === current && isPlaying ? AUTO_PLAY_MS / 1000 : 0.3, ease: "linear" }}
+              transition={{
+                duration: i === current && isPlaying ? slideDuration / 1000 : 0.3,
+                ease: "linear",
+              }}
             />
           </button>
         ))}
       </div>
 
-      {/* Glassmorphism control panel */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
         <div className="glass-panel flex items-center gap-1 px-2 py-2 rounded-2xl">
           <button
@@ -329,7 +419,6 @@ export default function HeroCarousel() {
         </div>
       </div>
 
-      {/* Edge vignette */}
       <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
     </section>
   );

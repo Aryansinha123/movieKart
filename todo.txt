@@ -1,0 +1,1 @@
+main hero -each 12 second 2 sec banner then 10 sec trailer 
