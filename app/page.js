@@ -20,7 +20,8 @@ import {
   Wand2,
 } from "lucide-react";
 
-import HeroSection from "@/components/movie/HeroSection";
+import HeroCarousel from "@/components/home/HeroCarousel";
+import LiveSportsSection from "@/components/home/LiveSportsSection";
 import TrendingMovies from "@/components/movie/TrendingMovies";
 import SearchBar from "@/components/movie/SearchBar";
 import MovieCard from "@/components/movie/MovieCard";
@@ -795,13 +796,14 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-black text-white">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-          <HeroSection />
-          <SearchBar />
+          <HeroCarousel />
+          <LiveSportsSection />
           <div className="max-w-[1600px] w-full mx-auto px-6">
+            <SearchBar />
             <NewReleases />
             <UpcomingMovies />
+            <TrendingMovies />
           </div>
-          <TrendingMovies />
         </motion.div>
       </main>
     );
@@ -810,46 +812,37 @@ export default function Home() {
   // LOGGED IN STATE
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden">
+      <HeroCarousel />
+      <LiveSportsSection />
 
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-black to-cyan-900/20" />
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-10 right-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-6 pt-16 pb-12 flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col items-center"
-          >
-            <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
-              Your Personalized Home
-            </h1>
-            <p className="text-zinc-400 mt-4 text-lg md:text-xl max-w-2xl font-light">
-              AI-powered movie recommendations tailored to your unique taste
-            </p>
-          </motion.div>
-
-          {/* Tabs */}
-          <div className="w-full max-w-7xl overflow-x-auto no-scrollbar mt-10">
-            <div className="flex justify-start sm:justify-center gap-3 pb-2 min-w-max px-6 sm:px-0">
+      {/* Dashboard tabs */}
+      <div className="relative border-b border-zinc-800/50 bg-black/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
+                Your Personalized Home
+              </h2>
+              <p className="text-zinc-500 text-sm mt-0.5">
+                AI-powered recommendations tailored to your taste
+              </p>
+            </div>
+          </div>
+          <div className="w-full overflow-x-auto no-scrollbar">
+            <div className="flex justify-start sm:justify-center gap-3 pb-1 min-w-max">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                       activeTab === tab.id
-                        ? "bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/40 text-white shadow-xl shadow-purple-500/10 scale-105"
+                        ? "bg-gradient-to-r from-purple-600/20 to-cyan-600/20 border border-purple-500/40 text-white shadow-lg shadow-purple-500/10"
                         : "bg-zinc-900/40 border border-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800/60 hover:border-zinc-700"
                     }`}
                   >
-                    <Icon size={18} />
+                    <Icon size={16} />
                     {tab.label}
                   </button>
                 );

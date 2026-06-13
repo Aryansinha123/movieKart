@@ -58,3 +58,42 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* ─── Cinematic Hero & Sports ─────────────────────── */
+.hero-title {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.8);
+}
+
+.glass-panel {
+  background: rgba(15, 15, 20, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.hero-shimmer {
+  background: linear-gradient(
+    110deg,
+    #0a0a0a 0%,
+    #141414 40%,
+    #1a1a1a 50%,
+    #141414 60%,
+    #0a0a0a 100%
+  );
+  background-size: 200% 100%;
+  animation: hero-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes hero-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
