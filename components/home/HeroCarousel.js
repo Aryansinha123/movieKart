@@ -18,6 +18,8 @@ import {
   Pause,
   Star,
   Radio,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import WatchListButton from "@/components/movie/WatchListButton";
 import { getMovieUrl } from "@/utils/slugify";
@@ -31,9 +33,14 @@ function getSlideDuration(slide) {
   return 12000;
 }
 
-function HeroTrailerPlayer({ videoKey, isActive, onPlaying }) {
+function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
   const [embedSrc, setEmbedSrc] = useState(null);
   const iframeRef = useRef(null);
+  const isMutedRef = useRef(isMuted);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   useEffect(() => {
     if (!isActive || !videoKey) {
@@ -42,8 +49,24 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying }) {
     }
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin));
+    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, isMutedRef.current));
   }, [isActive, videoKey]);
+
+  useEffect(() => {
+    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc) return;
+
+    const command = isMuted ? "mute" : "unMute";
+    if (!isMuted) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
+        "*"
+      );
+    }
+    iframeRef.current.contentWindow.postMessage(
+      JSON.stringify({ event: "command", func: command, args: [] }),
+      "*"
+    );
+  }, [isMuted, embedSrc]);
 
   useEffect(() => {
     if (!embedSrc) return;
@@ -94,7 +117,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying }) {
   );
 }
 
-function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload }) {
+function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted }) {
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -170,6 +193,7 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
               videoKey={slide.trailerKey}
               isActive={shouldLoadTrailer}
               onPlaying={() => setVideoPlaying(true)}
+              isMuted={isMuted}
             />
           </div>
         )}
@@ -301,6 +325,7 @@ export default function HeroCarousel() {
   const [prevCurrent, setPrevCurrent] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
 
@@ -468,6 +493,7 @@ export default function HeroCarousel() {
                 isCurrent={isCurrent}
                 isOutgoing={isOutgoing}
                 isPreload={isPreload}
+                isMuted={isMuted}
               />
             </Link>
           );
@@ -537,6 +563,14 @@ export default function HeroCarousel() {
             className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
           >
             <ChevronRight size={20} />
+          </button>
+
+          <button
+            onClick={() => setIsMuted((m) => !m)}
+            aria-label={isMuted ? "Unmute sound" : "Mute sound"}
+            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+          >
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       </div>

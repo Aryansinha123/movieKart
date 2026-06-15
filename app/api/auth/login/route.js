@@ -42,7 +42,7 @@ export async function POST(req) {
       },
       process.env.NEXTAUTH_SECRET,
       {
-        expiresIn: "7d",
+        expiresIn: "36500d",
       }
     );
 

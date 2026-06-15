@@ -12,7 +12,7 @@ function getUserFromToken(token) {
   if (!token) return null;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    if (payload?.exp && payload.exp * 1000 > Date.now()) return payload;
+    if (!payload?.exp || payload.exp * 1000 > Date.now()) return payload;
     return null;
   } catch {
     return null;

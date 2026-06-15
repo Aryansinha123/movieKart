@@ -137,7 +137,7 @@ export async function PATCH(req) {
         email: sanitizedUser.email,
       },
       process.env.NEXTAUTH_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "36500d" }
     );
 
     return NextResponse.json({ success: true, user: sanitizedUser, token });
