@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -27,7 +27,6 @@ import { getMovieUrl } from "@/utils/slugify";
 import { getYoutubeEmbedUrl } from "@/lib/trailers";
 
 const BASE_AUTO_PLAY_MS = 12000;
-const TRAILER_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
 function getSlideDuration(slide) {
@@ -147,7 +146,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
   );
 }
 
-function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted }) {
+function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, onVideoPlaying }) {
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -169,10 +168,11 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
 
     const fallbackTimer = setTimeout(() => {
       setVideoPlaying(true);
+      onVideoPlaying?.();
     }, 4500); // 2s banner phase + 2.5s loading buffer
 
     return () => clearTimeout(fallbackTimer);
-  }, [isCurrent, slide.trailerKey]);
+  }, [isCurrent, slide.trailerKey, onVideoPlaying]);
 
   // If the slide is unmounted from our stack, this handles resetting states
   useEffect(() => {
@@ -181,16 +181,19 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
     }
   }, [isCurrent]);
 
-  const shouldLoadTrailer = slide.trailerKey && (isCurrent || isPreload || isOutgoing);
+  // Restrict video loading ONLY to the current slide to prevent stutters, background playing, and audio overlapping
+  const shouldLoadTrailer = slide.trailerKey && isCurrent;
   const isVideoVisible = shouldLoadTrailer && showVideo && videoPlaying;
 
-  const slideOpacity = isCurrent ? 1 : 0;
+  // Use Overlay Crossfade (outgoing slide stays at opacity 1 beneath incoming slide at zIndex 10)
+  const slideOpacity = isCurrent ? 1 : (isOutgoing ? 1 : 0);
 
   return (
     <motion.div
       animate={{ opacity: slideOpacity }}
-      transition={{ duration: 1.2, ease: "easeInOut" }}
+      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1.0] }}
       className="absolute inset-0"
+      style={{ pointerEvents: isCurrent ? "auto" : "none" }}
     >
       <motion.div
         className="absolute inset-[-4%]"
@@ -205,7 +208,7 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
             alt=""
             fill
             priority
-            className={`object-cover object-center transition-opacity duration-1000 ${
+            className={`object-cover object-center transition-opacity duration-1000 ease-in-out ${
               isVideoVisible ? "opacity-0" : "opacity-100"
             }`}
             sizes="100vw"
@@ -215,14 +218,17 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
         {/* Video Player */}
         {shouldLoadTrailer && (
           <div
-            className={`absolute inset-0 transition-opacity duration-1000 ${
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
               isVideoVisible ? "opacity-100" : "opacity-0"
             }`}
           >
             <HeroTrailerPlayer
               videoKey={slide.trailerKey}
               isActive={shouldLoadTrailer}
-              onPlaying={() => setVideoPlaying(true)}
+              onPlaying={() => {
+                setVideoPlaying(true);
+                onVideoPlaying?.();
+              }}
               isMuted={isMuted}
             />
           </div>
@@ -261,18 +267,58 @@ async function enrichSlidesWithTrailers(slides) {
   );
 }
 
-function SlideContent({ slide, isActive }) {
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.15,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.215, 0.61, 0.355, 1.0],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.4,
+      ease: "easeIn",
+    },
+  },
+};
+
+const SlideContent = memo(function SlideContent({ slide, isActive }) {
   const rating = slide.vote_average ? slide.vote_average.toFixed(1) : null;
   const watchHref = getMovieUrl(slide.id, slide.title);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: isActive ? 1 : 0, y: isActive ? 0 : 40 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      variants={containerVariants}
+      initial="hidden"
+      animate={isActive ? "visible" : "hidden"}
+      exit="exit"
       className="relative z-20 max-w-3xl"
     >
-      <div
+      <motion.div
+        variants={itemVariants}
         className="inline-flex items-center gap-2 mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-[0.2em] backdrop-blur-md"
         style={{
           background: `linear-gradient(135deg, ${slide.accent}22, ${slide.accentSecondary}18)`,
@@ -295,13 +341,19 @@ function SlideContent({ slide, isActive }) {
           <Radio size={12} />
         )}
         {slide.badge}
-      </div>
+      </motion.div>
 
-      <h1 className="hero-title text-[clamp(2.25rem,5.5vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white mb-4 drop-shadow-2xl">
+      <motion.h1
+        variants={itemVariants}
+        className="hero-title text-[clamp(2.25rem,5.5vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white mb-4 drop-shadow-2xl"
+      >
         {slide.title}
-      </h1>
+      </motion.h1>
 
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <motion.div
+        variants={itemVariants}
+        className="flex flex-wrap items-center gap-3 mb-5"
+      >
         {rating && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-sm font-semibold">
             <Star size={14} className="fill-amber-400 text-amber-400" />
@@ -317,16 +369,22 @@ function SlideContent({ slide, isActive }) {
             {genre}
           </span>
         ))}
-      </div>
+      </motion.div>
 
-      <p className="text-zinc-300/90 text-base md:text-lg leading-relaxed max-w-2xl mb-8 line-clamp-3 font-light">
+      <motion.p
+        variants={itemVariants}
+        className="text-zinc-300/90 text-base md:text-lg leading-relaxed max-w-2xl mb-8 line-clamp-3 font-light"
+      >
         {slide.overview}
-      </p>
+      </motion.p>
 
-      <div className="flex flex-wrap gap-3">
+      <motion.div
+        variants={itemVariants}
+        className="flex flex-wrap gap-3"
+      >
         <Link href={watchHref}>
           <button
-            className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+            className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg cursor-pointer"
             style={{
               background: `linear-gradient(135deg, ${slide.accent}, ${slide.accentSecondary})`,
               boxShadow: `0 8px 32px ${slide.accent}44`,
@@ -339,15 +397,15 @@ function SlideContent({ slide, isActive }) {
 
         <WatchListButton
           movieId={slide.id}
-          className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         >
           <Plus size={18} />
           Add to Watchlist
         </WatchListButton>
-      </div>
+      </motion.div>
     </motion.div>
   );
-}
+});
 
 export default function HeroCarousel() {
   const [slides, setSlides] = useState([]);
@@ -358,12 +416,18 @@ export default function HeroCarousel() {
   const [isMuted, setIsMuted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [currentVideoReady, setCurrentVideoReady] = useState(false);
 
-  // Delayed state updater for prevCurrent to handle slide fade-out transitions
+  // Reset video ready status when transitioning to a new slide
+  useEffect(() => {
+    setCurrentVideoReady(false);
+  }, [current]);
+
+  // Delayed state updater for prevCurrent to handle slide fade-out transitions (800ms Transition)
   useEffect(() => {
     const timer = setTimeout(() => {
       setPrevCurrent(current);
-    }, 1200); // 1200ms is the duration of our slide crossfade transition
+    }, 800);
     return () => clearTimeout(timer);
   }, [current]);
 
@@ -429,14 +493,31 @@ export default function HeroCarousel() {
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
+  // Keyboard arrow key navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") {
+        prev();
+      } else if (e.key === "ArrowRight") {
+        next();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [next, prev]);
+
   const slide = slides[current];
   const slideDuration = slide ? getSlideDuration(slide) : BASE_AUTO_PLAY_MS;
 
+  // Autoplay countdown timer starts only when active slide is playing and not hovered
+  const isTimerActive = isPlaying && !isHovered && (!slide?.trailerKey || currentVideoReady);
+
   useEffect(() => {
-    if (!isPlaying || isHovered || slides.length <= 1 || isDragging.current) return;
-    const timer = setInterval(next, slideDuration);
-    return () => clearInterval(timer);
-  }, [isPlaying, isHovered, slides.length, next, current, slideDuration]);
+    if (!isTimerActive || slides.length <= 1 || isDragging.current) return;
+    
+    const timer = setTimeout(next, slideDuration);
+    return () => clearTimeout(timer);
+  }, [isTimerActive, current, slideDuration, next, slides.length]);
 
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;
@@ -495,6 +576,13 @@ export default function HeroCarousel() {
       onPointerCancel={handlePointerUp}
       aria-label="Featured content carousel"
     >
+      <style>{`
+        @keyframes progress-bar {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
+
       {/* Stacked slide backgrounds with custom preloading and crossfading */}
       <div className="absolute inset-0 z-0">
         {slides.map((s, idx) => {
@@ -524,6 +612,7 @@ export default function HeroCarousel() {
                 isOutgoing={isOutgoing}
                 isPreload={isPreload}
                 isMuted={isMuted}
+                onVideoPlaying={() => setCurrentVideoReady(true)}
               />
             </Link>
           );
@@ -542,21 +631,17 @@ export default function HeroCarousel() {
             key={s.id}
             onClick={() => goTo(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className="group relative h-1 rounded-full overflow-hidden transition-all duration-500"
+            className="group relative h-1 rounded-full overflow-hidden transition-all duration-500 cursor-pointer"
             style={{ width: i === current ? 40 : 16 }}
           >
             <span className="absolute inset-0 bg-white/20 rounded-full" />
-            <motion.span
-              className="absolute inset-y-0 left-0 rounded-full"
-              style={{ background: `linear-gradient(90deg, ${s.accent}, ${s.accentSecondary})` }}
-              initial={false}
-              animate={{
-                width: i === current ? "100%" : "0%",
-                opacity: i === current ? 1 : 0.4,
-              }}
-              transition={{
-                duration: i === current && isPlaying ? slideDuration / 1000 : 0.3,
-                ease: "linear",
+            <span
+              className="absolute inset-y-0 left-0 right-0 rounded-full origin-left"
+              style={{
+                background: `linear-gradient(90deg, ${s.accent}, ${s.accentSecondary})`,
+                transform: i === current ? undefined : "scaleX(0)",
+                animation: i === current && isTimerActive ? `progress-bar ${slideDuration}ms linear forwards` : "none",
+                animationPlayState: isTimerActive ? "running" : "paused",
               }}
             />
           </button>
@@ -568,7 +653,7 @@ export default function HeroCarousel() {
           <button
             onClick={prev}
             aria-label="Previous slide"
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
             <ChevronLeft size={20} />
           </button>
@@ -576,7 +661,7 @@ export default function HeroCarousel() {
           <button
             onClick={() => setIsPlaying((p) => !p)}
             aria-label={isPlaying ? "Pause autoplay" : "Resume autoplay"}
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
             {isPlaying ? <Pause size={18} /> : <Play size={18} className="fill-current" />}
           </button>
@@ -590,7 +675,7 @@ export default function HeroCarousel() {
           <button
             onClick={next}
             aria-label="Next slide"
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
             <ChevronRight size={20} />
           </button>
@@ -598,7 +683,7 @@ export default function HeroCarousel() {
           <button
             onClick={() => setIsMuted((m) => !m)}
             aria-label={isMuted ? "Unmute sound" : "Mute sound"}
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all"
+            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
           >
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
