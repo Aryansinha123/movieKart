@@ -28,6 +28,17 @@ import { getYoutubeEmbedUrl } from "@/lib/trailers";
 const BASE_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
+const LANG_LABELS = {
+  hi: "Hindi",
+  en: "English",
+  te: "Telugu",
+  ta: "Tamil",
+  ml: "Malayalam",
+  kn: "Kannada",
+  ko: "Korean",
+  ja: "Japanese",
+};
+
 function getSlideDuration(slide) {
   return 12000;
 }
@@ -78,10 +89,17 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
     setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, initialMute));
   }, [isActive, videoKey]);
 
+  const [playerReady, setPlayerReady] = useState(false);
+
+  // Reset playerReady when video source changes
+  useEffect(() => {
+    setPlayerReady(false);
+  }, [embedSrc]);
+
   const effectiveMuteState = isMuted || !hasInteracted;
 
   useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc) return;
+    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc || !playerReady) return;
 
     const command = effectiveMuteState ? "mute" : "unMute";
     if (!effectiveMuteState) {
@@ -94,7 +112,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
       JSON.stringify({ event: "command", func: command, args: [] }),
       "*"
     );
-  }, [effectiveMuteState, embedSrc]);
+  }, [effectiveMuteState, embedSrc, playerReady]);
 
   useEffect(() => {
     if (!embedSrc) return;
@@ -107,6 +125,11 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
       try {
         const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         
+        // If the player starts sending message events, it is ready to communicate
+        if (data.event) {
+          setPlayerReady(true);
+        }
+
         // YouTube API playing states:
         // - infoDelivery/initialDelivery with playerState = 1 (playing)
         // - onStateChange with info = 1 (playing)
@@ -373,6 +396,11 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
             <Star size={14} className="fill-amber-400 text-amber-400" />
             {rating}
             <span className="text-amber-400/70 font-normal text-xs">IMDb</span>
+          </span>
+        )}
+        {slide.original_language && (
+          <span className="px-3 py-1 rounded-lg text-xs font-semibold text-white bg-red-500/15 border border-red-500/30 backdrop-blur-sm uppercase tracking-wide">
+            {LANG_LABELS[slide.original_language] || slide.original_language.toUpperCase()}
           </span>
         )}
         {slide.genres?.map((genre) => (
