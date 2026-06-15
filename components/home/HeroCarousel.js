@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   motion,
-  AnimatePresence,
   useMotionValue,
   useTransform,
   useSpring,
@@ -146,7 +145,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
   );
 }
 
-function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, onVideoPlaying }) {
+const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, onVideoPlaying }) {
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -247,7 +246,7 @@ function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, i
       <div className="absolute inset-0 z-[2] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-60 pointer-events-none" />
     </motion.div>
   );
-}
+});
 
 async function enrichSlidesWithTrailers(slides) {
   return Promise.all(
@@ -272,34 +271,34 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15,
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
     },
   },
   exit: {
     opacity: 0,
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.04,
       staggerDirection: -1,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.6,
-      ease: [0.215, 0.61, 0.355, 1.0],
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: -10,
+    y: -8,
     transition: {
-      duration: 0.4,
+      duration: 0.3,
       ease: "easeIn",
     },
   },
@@ -319,14 +318,27 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
     >
       <motion.div
         variants={itemVariants}
-        className="inline-flex items-center gap-2 mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-[0.2em] backdrop-blur-md"
         style={{
           background: `linear-gradient(135deg, ${slide.accent}22, ${slide.accentSecondary}18)`,
           border: `1px solid ${slide.accent}44`,
           color: slide.accentSecondary || slide.accent,
+          willChange: "transform, opacity",
+          animation: slide.source === "preferred" ? "language-glow-pulse 2s infinite ease-in-out" : "none",
         }}
+        className="inline-flex items-center gap-2 mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-[0.2em] backdrop-blur-md"
       >
-        {slide.badge === "Live Now" || slide.badge === "Now Playing in Theaters" ? (
+        {slide.source === "preferred" ? (
+          <span className="relative flex h-2 w-2 mr-1">
+            <span
+              className="animate-pulse absolute inline-flex h-full w-full rounded-full opacity-75"
+              style={{ backgroundColor: slide.accent }}
+            />
+            <span
+              className="relative inline-flex rounded-full h-2 w-2"
+              style={{ backgroundColor: slide.accent }}
+            />
+          </span>
+        ) : slide.badge === "Live Now" || slide.badge === "Now Playing in Theaters" ? (
           <span className="relative flex h-2 w-2">
             <span
               className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
@@ -345,6 +357,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
 
       <motion.h1
         variants={itemVariants}
+        style={{ willChange: "transform, opacity" }}
         className="hero-title text-[clamp(2.25rem,5.5vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white mb-4 drop-shadow-2xl"
       >
         {slide.title}
@@ -352,6 +365,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
 
       <motion.div
         variants={itemVariants}
+        style={{ willChange: "transform, opacity" }}
         className="flex flex-wrap items-center gap-3 mb-5"
       >
         {rating && (
@@ -373,6 +387,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
 
       <motion.p
         variants={itemVariants}
+        style={{ willChange: "transform, opacity" }}
         className="text-zinc-300/90 text-base md:text-lg leading-relaxed max-w-2xl mb-8 line-clamp-3 font-light"
       >
         {slide.overview}
@@ -380,6 +395,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
 
       <motion.div
         variants={itemVariants}
+        style={{ willChange: "transform, opacity" }}
         className="flex flex-wrap gap-3"
       >
         <Link href={watchHref}>
@@ -423,7 +439,7 @@ export default function HeroCarousel() {
     setCurrentVideoReady(false);
   }, [current]);
 
-  // Delayed state updater for prevCurrent to handle slide fade-out transitions (800ms Transition)
+  // Delayed state updater for prevCurrent to handle slide fade-out transitions (800ms Snappy Transition)
   useEffect(() => {
     const timer = setTimeout(() => {
       setPrevCurrent(current);
@@ -506,6 +522,11 @@ export default function HeroCarousel() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [next, prev]);
 
+  // Stable callback for video ready notification
+  const handleVideoPlaying = useCallback(() => {
+    setCurrentVideoReady(true);
+  }, []);
+
   const slide = slides[current];
   const slideDuration = slide ? getSlideDuration(slide) : BASE_AUTO_PLAY_MS;
 
@@ -581,6 +602,16 @@ export default function HeroCarousel() {
           from { transform: scaleX(0); }
           to { transform: scaleX(1); }
         }
+        @keyframes language-glow-pulse {
+          0%, 100% {
+            box-shadow: 0 0 4px var(--slide-accent-pulse), inset 0 0 2px var(--slide-accent-pulse);
+            border-color: var(--slide-accent-border);
+          }
+          50% {
+            box-shadow: 0 0 12px var(--slide-accent-glow), inset 0 0 6px var(--slide-accent-glow);
+            border-color: var(--slide-accent-glow-border);
+          }
+        }
       `}</style>
 
       {/* Stacked slide backgrounds with custom preloading and crossfading */}
@@ -597,32 +628,42 @@ export default function HeroCarousel() {
           const watchHref = getMovieUrl(s.id, s.title);
 
           return (
-            <Link
+            <div
               key={s.id}
-              href={watchHref}
-              style={{ zIndex, pointerEvents }}
-              className="absolute inset-0 block cursor-pointer"
+              style={{
+                zIndex,
+                pointerEvents,
+                "--slide-accent-pulse": `${s.accent}33`,
+                "--slide-accent-border": `${s.accent}44`,
+                "--slide-accent-glow": `${s.accent}77`,
+                "--slide-accent-glow-border": `${s.accent}aa`,
+              }}
+              className="absolute inset-0"
             >
-              <SlideBackground
-                slide={s}
-                parallaxX={parallaxX}
-                parallaxY={parallaxY}
-                dragOffset={dragOffset}
-                isCurrent={isCurrent}
-                isOutgoing={isOutgoing}
-                isPreload={isPreload}
-                isMuted={isMuted}
-                onVideoPlaying={() => setCurrentVideoReady(true)}
-              />
-            </Link>
+              {/* Background click details */}
+              <Link href={watchHref} className="absolute inset-0 block cursor-pointer z-0">
+                <SlideBackground
+                  slide={s}
+                  parallaxX={parallaxX}
+                  parallaxY={parallaxY}
+                  dragOffset={dragOffset}
+                  isCurrent={isCurrent}
+                  isOutgoing={isOutgoing}
+                  isPreload={isPreload}
+                  isMuted={isMuted}
+                  onVideoPlaying={handleVideoPlaying}
+                />
+              </Link>
+
+              {/* Text content locked to this specific slide (pre-rendered and smooth) */}
+              <div className="relative z-10 h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32 pointer-events-none">
+                <div className="pointer-events-auto">
+                  <SlideContent slide={s} isActive={isCurrent} />
+                </div>
+              </div>
+            </div>
           );
         })}
-      </div>
-
-      <div className="relative z-10 h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32">
-        <AnimatePresence mode="wait">
-          <SlideContent key={slide.id} slide={slide} isActive />
-        </AnimatePresence>
       </div>
 
       <div className="absolute bottom-24 md:bottom-28 left-6 md:left-10 z-30 flex items-center gap-2">
