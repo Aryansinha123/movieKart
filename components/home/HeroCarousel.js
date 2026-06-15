@@ -85,21 +85,16 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
     }
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const initialMute = isMutedRef.current || !hasInteractedRef.current;
-    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, initialMute));
+    // Note: We always start the embed with mute=1 in the URL so that the browser does NOT block autoplay.
+    // We then dynamically unmute it as soon as the video is playing and user has interacted.
+    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, true));
   }, [isActive, videoKey]);
-
-  const [playerReady, setPlayerReady] = useState(false);
-
-  // Reset playerReady when video source changes
-  useEffect(() => {
-    setPlayerReady(false);
-  }, [embedSrc]);
 
   const effectiveMuteState = isMuted || !hasInteracted;
 
+  // Send volume/mute commands whenever state changes
   useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc || !playerReady) return;
+    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc) return;
 
     const command = effectiveMuteState ? "mute" : "unMute";
     if (!effectiveMuteState) {
@@ -112,7 +107,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
       JSON.stringify({ event: "command", func: command, args: [] }),
       "*"
     );
-  }, [effectiveMuteState, embedSrc, playerReady]);
+  }, [effectiveMuteState, embedSrc]);
 
   useEffect(() => {
     if (!embedSrc) return;
@@ -125,11 +120,6 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
       try {
         const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         
-        // If the player starts sending message events, it is ready to communicate
-        if (data.event) {
-          setPlayerReady(true);
-        }
-
         // YouTube API playing states:
         // - infoDelivery/initialDelivery with playerState = 1 (playing)
         // - onStateChange with info = 1 (playing)
@@ -140,6 +130,19 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
 
         if (isPlayingState) {
           onPlaying?.();
+
+          // Sync volume and mute state as soon as the player is active and playing
+          const command = isMutedRef.current || !hasInteractedRef.current ? "mute" : "unMute";
+          if (command === "unMute") {
+            iframeRef.current.contentWindow.postMessage(
+              JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
+              "*"
+            );
+          }
+          iframeRef.current.contentWindow.postMessage(
+            JSON.stringify({ event: "command", func: command, args: [] }),
+            "*"
+          );
         }
       } catch (e) {
         // Ignore parser or irrelevant messages
