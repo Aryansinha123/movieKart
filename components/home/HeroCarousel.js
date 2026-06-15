@@ -37,11 +37,37 @@ function getSlideDuration(slide) {
 function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
   const [embedSrc, setEmbedSrc] = useState(null);
   const iframeRef = useRef(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const isMutedRef = useRef(isMuted);
+  const hasInteractedRef = useRef(hasInteracted);
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      setHasInteracted(true);
+    };
+
+    window.addEventListener("click", handleInteraction, { once: true });
+    window.addEventListener("touchstart", handleInteraction, { once: true });
+    window.addEventListener("keydown", handleInteraction, { once: true });
+
+    if (typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
+      setHasInteracted(true);
+    }
+
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("touchstart", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+    };
+  }, []);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  useEffect(() => {
+    hasInteractedRef.current = hasInteracted;
+  }, [hasInteracted]);
 
   useEffect(() => {
     if (!isActive || !videoKey) {
@@ -50,14 +76,17 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
     }
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, isMutedRef.current));
+    const initialMute = isMutedRef.current || !hasInteractedRef.current;
+    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, initialMute));
   }, [isActive, videoKey]);
+
+  const effectiveMuteState = isMuted || !hasInteracted;
 
   useEffect(() => {
     if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc) return;
 
-    const command = isMuted ? "mute" : "unMute";
-    if (!isMuted) {
+    const command = effectiveMuteState ? "mute" : "unMute";
+    if (!effectiveMuteState) {
       iframeRef.current.contentWindow.postMessage(
         JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
         "*"
@@ -67,7 +96,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
       JSON.stringify({ event: "command", func: command, args: [] }),
       "*"
     );
-  }, [isMuted, embedSrc]);
+  }, [effectiveMuteState, embedSrc]);
 
   useEffect(() => {
     if (!embedSrc) return;
