@@ -175,7 +175,6 @@ const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parall
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
-  // Trigger video showing after 2 seconds if it's the current slide
   useEffect(() => {
     if (!isCurrent) {
       setShowVideo(false);
@@ -187,89 +186,89 @@ const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parall
     return () => clearTimeout(timer);
   }, [isCurrent]);
 
-  // Fallback timeout to ensure trailer is displayed even if postMessage fails/is blocked (e.g. by adblockers)
   useEffect(() => {
     if (!isCurrent || !slide.trailerKey) return;
 
     const fallbackTimer = setTimeout(() => {
       setVideoPlaying(true);
       onVideoPlaying?.();
-    }, 4500); // 2s banner phase + 2.5s loading buffer
+    }, 4500);
 
     return () => clearTimeout(fallbackTimer);
   }, [isCurrent, slide.trailerKey, onVideoPlaying]);
 
-  // If the slide is unmounted from our stack, this handles resetting states
   useEffect(() => {
     if (!isCurrent) {
       setVideoPlaying(false);
     }
   }, [isCurrent]);
 
-  // Restrict video loading ONLY to the current slide to prevent stutters, background playing, and audio overlapping
   const shouldLoadTrailer = slide.trailerKey && isCurrent;
   const isVideoVisible = shouldLoadTrailer && showVideo && videoPlaying;
-
-  // Use Overlay Crossfade (outgoing slide stays at opacity 1 beneath incoming slide at zIndex 10)
   const slideOpacity = isCurrent ? 1 : (isOutgoing ? 1 : 0);
 
   return (
     <motion.div
       animate={{ opacity: slideOpacity }}
       transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1.0] }}
-      className="absolute inset-0"
+      className="absolute inset-0 hero-media-layer"
       style={{ pointerEvents: isCurrent ? "auto" : "none" }}
     >
+      {/* Layer 1: Backdrop banner — parallax only on image, never on video */}
       <motion.div
-        className="absolute inset-[-4%]"
-        style={{ x: parallaxX, y: parallaxY }}
-        animate={{ scale: isCurrent ? 1.05 : 1.0 }}
-        transition={{ duration: 12, ease: "linear" }}
+        className="absolute inset-0 z-0"
+        style={{ x: dragOffset * 0.12 }}
+        animate={{ opacity: isVideoVisible ? 0 : 1 }}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
       >
-        {/* Backdrop image */}
-        {slide.backdrop && (
-          <Image
-            src={slide.backdrop}
-            alt=""
-            fill
-            priority
-            className={`object-cover object-center transition-opacity duration-1000 ease-in-out ${
-              isVideoVisible ? "opacity-0" : "opacity-100"
-            }`}
-            sizes="100vw"
-          />
-        )}
+        <motion.div className="absolute inset-[-4%]" style={{ x: parallaxX, y: parallaxY }}>
+          {slide.backdrop && (
+            <Image
+              src={slide.backdrop}
+              alt=""
+              fill
+              priority
+              className="object-cover object-center"
+              sizes="100vw"
+            />
+          )}
+        </motion.div>
+      </motion.div>
 
-        {/* Video Player */}
-        {shouldLoadTrailer && (
-          <div
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              isVideoVisible ? "opacity-100" : "opacity-0"
-            }`}
-          >
+      {/* Layer 2: Trailer — separate layer, no CSS transform on parent */}
+      {shouldLoadTrailer && (
+        <motion.div
+          className="absolute inset-0 z-[1] overflow-hidden"
+          animate={{ opacity: isVideoVisible ? 1 : 0 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          style={{ pointerEvents: "none" }}
+        >
+          {showVideo && (
             <HeroTrailerPlayer
               videoKey={slide.trailerKey}
-              isActive={shouldLoadTrailer}
+              isActive={shouldLoadTrailer && showVideo}
               onPlaying={() => {
                 setVideoPlaying(true);
                 onVideoPlaying?.();
               }}
               isMuted={isMuted}
             />
-          </div>
-        )}
-      </motion.div>
+          )}
+        </motion.div>
+      )}
 
-      {/* Cinematic overlays */}
-      <div className="absolute inset-0 z-[2] bg-gradient-to-r from-black via-black/70 to-black/20 pointer-events-none" />
-      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-[#050505] via-transparent to-black/40 pointer-events-none" />
-      <div
-        className="absolute inset-0 z-[2] opacity-40 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse 80% 60% at 20% 50%, ${slide.accent}33, transparent 70%)`,
-        }}
-      />
-      <div className="absolute inset-0 z-[2] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-60 pointer-events-none" />
+      {/* Layer 3: Cinematic scrims — always above media, below text */}
+      <div className="absolute inset-0 z-[5] pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/20 to-black/50" />
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `radial-gradient(ellipse 70% 55% at 18% 55%, ${slide.accent}33, transparent 70%)`,
+          }}
+        />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-50" />
+      </div>
     </motion.div>
   );
 });
@@ -340,7 +339,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
       initial="hidden"
       animate={isActive ? "visible" : "hidden"}
       exit="exit"
-      className="relative z-20 max-w-3xl"
+      className="relative z-20 max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]"
     >
       <motion.div
         variants={itemVariants}
@@ -646,7 +645,7 @@ export default function HeroCarousel() {
       `}</style>
 
       {/* Stacked slide backgrounds with custom preloading and crossfading */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 hero-media-layer">
         {slides.map((s, idx) => {
           const isCurrent = idx === current;
           const isOutgoing = idx === prevCurrent && !isCurrent;
@@ -655,7 +654,6 @@ export default function HeroCarousel() {
           if (!isCurrent && !isOutgoing && !isPreload) return null;
 
           const zIndex = isCurrent ? 10 : (isOutgoing ? 5 : 0);
-          const pointerEvents = isCurrent ? "auto" : "none";
           const watchHref = getMovieUrl(s.id, s.title);
 
           return (
@@ -663,7 +661,6 @@ export default function HeroCarousel() {
               key={s.id}
               style={{
                 zIndex,
-                pointerEvents,
                 "--slide-accent-pulse": `${s.accent}33`,
                 "--slide-accent-border": `${s.accent}44`,
                 "--slide-accent-glow": `${s.accent}77`,
@@ -671,7 +668,6 @@ export default function HeroCarousel() {
               }}
               className="absolute inset-0"
             >
-              {/* Background click details */}
               <Link href={watchHref} className="absolute inset-0 block cursor-pointer z-0">
                 <SlideBackground
                   slide={s}
@@ -686,8 +682,7 @@ export default function HeroCarousel() {
                 />
               </Link>
 
-              {/* Text content locked to this specific slide (pre-rendered and smooth) */}
-              <div className="relative z-10 h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32 pointer-events-none">
+              <div className="hero-content-layer h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32 pointer-events-none">
                 <div className="pointer-events-auto">
                   <SlideContent slide={s} isActive={isCurrent} />
                 </div>

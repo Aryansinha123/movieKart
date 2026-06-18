@@ -148,7 +148,7 @@ export default function Navbar() {
           </Link>
         )}
         <Link
-          href="/collection"
+          href="/collections"
           className="text-zinc-300 hover:text-white transition-colors"
         >
           Collections
@@ -349,7 +349,7 @@ export default function Navbar() {
             </Link>
           )}
           <Link
-            href="/collection"
+            href="/collections"
             onClick={() => setMobileMenuOpen(false)}
             className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
           >

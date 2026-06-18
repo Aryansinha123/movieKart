@@ -96,7 +96,7 @@ body {
 .hero-trailer-wrap {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
 }
@@ -107,9 +107,19 @@ body {
   left: 50%;
   width: max(100vw, 177.78vh);
   height: max(56.25vw, 100vh);
-  transform: translate(-50%, -50%) scale(1.35);
+  transform: translate(-50%, -50%);
   border: 0;
   pointer-events: none;
+}
+
+.hero-media-layer {
+  isolation: isolate;
+}
+
+.hero-content-layer {
+  position: relative;
+  z-index: 30;
+  isolation: isolate;
 }
 
 @keyframes pulse-live {

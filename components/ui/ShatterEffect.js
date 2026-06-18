@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export default function ShatterEffect({
   rect,
   imageUrl,
-  duration = 900, // ms
+  duration = 1200, // ms
   onComplete,
   isReversing = false,
   onReverseComplete,
