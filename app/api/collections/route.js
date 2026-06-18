@@ -48,6 +48,8 @@ export async function POST(req) {
     const body = await req.json().catch(() => null);
     const name = (body?.name || "").toString().trim();
     const isPublic = Boolean(body?.isPublic);
+    const description = (body?.description || "").toString().trim();
+    const category = (body?.category || "Custom").toString().trim();
 
     if (!name) {
       return NextResponse.json(
@@ -59,6 +61,8 @@ export async function POST(req) {
     const collection = await Collection.create({
       ownerId: userData.id,
       name,
+      description,
+      category,
       isPublic,
       movies: [],
     });

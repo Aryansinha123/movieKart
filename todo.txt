@@ -3,3 +3,160 @@ main hero -each 12 second 2 sec banner then 10 sec trailer
 
 next unwatched movie in collection on watch now button  
 personal collection + saved on top row
+allow edit re order delete add movie in moviekart collection update banner
+
+
+
+
+Update the MovieKart Collections feature with the following improvements and UX enhancements.
+
+### Library Page Layout
+
+Reorganize the Collections Library page into sections:
+
+#### Row 1 (Highest Priority)
+
+1. My Collections (collections created by the user)
+2. Saved Collections (official or community collections saved by the user)
+
+These two sections should always appear at the top of the Collections page.
+
+#### Below
+
+* Featured Collections
+* Trending Collections
+* Community Collections
+* Recommended Collections
+
+---
+
+### Smart Watch Now Button
+
+Improve the Watch Now button functionality.
+
+Current behavior:
+
+* Starts from the first movie.
+
+New behavior:
+
+* Automatically detect watched progress.
+* Open the next unwatched movie/show in the collection.
+
+Example:
+
+MCU Collection
+✓ Iron Man (Watched)
+✓ The Incredible Hulk (Watched)
+✓ Iron Man 2 (Watched)
+▶ Thor (Next Unwatched)
+
+Clicking Watch Now should directly open Thor.
+
+If all titles are watched:
+
+* Show "Collection Completed"
+* Allow Restart Collection option.
+
+---
+
+### Personal Collection Management
+
+Users should have complete control over collections they create.
+
+Add support for:
+
+* Edit Collection
+* Delete Collection
+* Duplicate Collection
+* Rename Collection
+* Change Description
+* Change Privacy
+* Update Banner/Cover Image
+* Add Movies
+* Remove Movies
+* Reorder Movies
+* Reorder Shows
+* Change Collection Category
+
+---
+
+### Drag and Drop Reordering
+
+Implement drag-and-drop sorting.
+
+Users should be able to:
+
+* Drag movies up/down
+* Change watch order
+* Create custom viewing sequences
+* Save custom order instantly
+
+Example:
+
+1. Iron Man
+2. Thor
+3. Captain America
+
+User can drag Captain America to position #1.
+
+---
+
+###
+
+---
+
+### Collection Banner Customization
+
+Users can fully customize their collection appearance.
+
+Allow:
+
+* Upload custom banner
+* Upload cover image
+* Auto-generate banner from movie posters
+* Choose gradient backgrounds
+* Choose theme colors
+
+Display banner prominently at the top of the collection page.
+
+---
+
+###
+
+---
+
+### Collection Detail Page Actions
+
+For collections owned by the user:
+
+* Watch Now
+* Edit Collection
+* Add Movies
+* Reorder Items
+* Update Banner
+* Share Collection
+* Duplicate Collection
+* Delete Collection
+
+For saved collections:
+
+* Watch Now
+* Remove from Library
+* Share Collection
+edit / remove /add movie but to themselve not globall
+---
+
+### UX Goals
+
+The experience should feel premium and similar to Spotify playlists and Letterboxd lists:
+
+* Continue Watching support
+* Next Unwatched movie detection
+* One-click Add to Collection
+* Smooth drag-and-drop reordering
+* Collection progress tracking
+* Beautiful customizable collection banners
+* Fast and intuitive collection management
+* Fully responsive design
+* Modern animations and transitions

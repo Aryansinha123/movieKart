@@ -14,6 +14,14 @@ const UserCuratedCollectionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    /** Personal watch order / additions — does not affect the global curated list. */
+    personalItems: [{ type: Number }],
+    personalBannerUrl: { type: String, default: "" },
+    bannerStyle: {
+      gradient: { type: String, default: "" },
+      themeColor: { type: String, default: "" },
+      autoGenerate: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

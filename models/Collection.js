@@ -18,6 +18,26 @@ const CollectionSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    /** Wide banner displayed on collection detail page. */
+    bannerUrl: {
+      type: String,
+      default: "",
+    },
+    description: {
+      type: String,
+      default: "",
+      maxlength: 500,
+    },
+    category: {
+      type: String,
+      default: "Custom",
+      trim: true,
+    },
+  bannerStyle: {
+      gradient: { type: String, default: "" },
+      themeColor: { type: String, default: "" },
+      autoGenerate: { type: Boolean, default: false },
+    },
     isPublic: {
       type: Boolean,
       default: false,

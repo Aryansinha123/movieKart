@@ -89,3 +89,42 @@ export async function DELETE(req, context) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
+/** Reorder movies in a collection. */
+export async function PUT(req, context) {
+  try {
+    await connectDB();
+    const userData = getUserFromToken(req);
+    if (!userData) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    const params = await context.params;
+    const id = params?.id;
+    const body = await req.json().catch(() => null);
+    const movies = body?.movies;
+
+    if (!Array.isArray(movies)) {
+      return NextResponse.json(
+        { success: false, message: "movies array is required." },
+        { status: 400 }
+      );
+    }
+
+    const collection = await Collection.findOne({ _id: id, ownerId: userData.id });
+    if (!collection) {
+      return NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 });
+    }
+
+    const validIds = movies.map(Number).filter((n) => Number.isFinite(n));
+    const existingSet = new Set(collection.movies);
+    const reordered = validIds.filter((id) => existingSet.has(id));
+    const missing = collection.movies.filter((id) => !reordered.includes(id));
+    collection.movies = [...reordered, ...missing];
+    await collection.save();
+
+    return NextResponse.json({ success: true, collection });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}

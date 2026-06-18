@@ -14,6 +14,14 @@ const SavedCollectionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    /** Personal watch order / additions for saved community collections. */
+    personalItems: [{ type: Number }],
+    personalBannerUrl: { type: String, default: "" },
+    bannerStyle: {
+      gradient: { type: String, default: "" },
+      themeColor: { type: String, default: "" },
+      autoGenerate: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

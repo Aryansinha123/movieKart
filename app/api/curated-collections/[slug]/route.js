@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import CuratedCollection from "@/models/CuratedCollection";
-import { enrichCollectionDetail, ensureCuratedCollectionsSeeded } from "@/lib/curatedCollections";
+import UserCuratedCollection from "@/models/UserCuratedCollection";
+import User from "@/models/User";
+import { ensureCuratedCollectionsSeeded } from "@/lib/curatedCollections";
+import { enrichCuratedWithPersonalization } from "@/lib/collectionUtils";
 
 export async function GET(req, { params }) {
   try {
@@ -21,9 +24,35 @@ export async function GET(req, { params }) {
     }
 
     const userData = getUserFromToken(req);
-    const enriched = await enrichCollectionDetail(collection, userData?.id);
+    let personalization = null;
+    let watched = [];
 
-    return NextResponse.json({ success: true, collection: enriched });
+    if (userData) {
+      personalization = await UserCuratedCollection.findOne({
+        userId: userData.id,
+        curatedCollectionId: collection._id,
+      }).lean();
+      const user = await User.findById(userData.id).select("watchedMovies").lean();
+      watched = user?.watchedMovies || [];
+    }
+
+    const enriched = await enrichCuratedWithPersonalization(collection, personalization, watched);
+
+    return NextResponse.json({
+      success: true,
+      collection: {
+        ...enriched,
+        slug: collection.slug,
+        title: collection.title,
+        description: collection.description,
+        category: collection.category,
+        tags: collection.tags,
+        plannedTitles: collection.plannedTitles,
+        saved: Boolean(personalization),
+        isOwner: false,
+        canPersonalize: Boolean(personalization),
+      },
+    });
   } catch (error) {
     console.error("Curated collection detail error:", error);
     return NextResponse.json(
