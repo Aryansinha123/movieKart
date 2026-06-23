@@ -222,8 +222,8 @@ export default async function PersonPage({ params }) {
 
       <div className="max-w-7xl mx-auto px-6 md:px-10 -mt-40 relative z-20">
         <div className="flex flex-col md:flex-row gap-10">
-          {/* Profile Image */}
-          <div className="shrink-0 w-64 lg:w-80 mx-auto md:mx-0">
+          {/* Profile Image & Personal Info */}
+          <div className="shrink-0 w-64 lg:w-80 mx-auto md:mx-0 md:sticky md:top-24 h-fit">
             <div className="rounded-2xl overflow-hidden border-4 border-zinc-900 shadow-2xl shadow-black shadow-inner bg-zinc-900 aspect-[2/3] relative">
               {person.profile_path ? (
                 <Image
