@@ -176,11 +176,33 @@ export default async function PersonPage({ params }) {
     );
   }
 
-  // Sort and filter filmography
-  const filmography = credits?.cast
-    ?.filter(m => m.poster_path)
-    ?.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    ?.slice(0, 18) || [];
+  // Helper to deduplicate movies/TV shows by ID
+  const uniqueCredits = (arr) => {
+    const seen = new Set();
+    return arr.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+  };
+
+  // Get directed movies (crew credits with job === "Director")
+  const directedMovies = uniqueCredits(
+    credits?.crew?.filter(m => m.job === "Director" && m.poster_path) || []
+  ).sort((a, b) => {
+    const dateA = a.release_date || a.first_air_date || "";
+    const dateB = b.release_date || b.first_air_date || "";
+    return dateB.localeCompare(dateA); // Newest first
+  });
+
+  // Get acting roles (cast credits)
+  const actingMovies = uniqueCredits(
+    credits?.cast?.filter(m => m.poster_path) || []
+  ).sort((a, b) => {
+    const dateA = a.release_date || a.first_air_date || "";
+    const dateB = b.release_date || b.first_air_date || "";
+    return dateB.localeCompare(dateA); // Newest first
+  });
 
   const personJsonLd = {
     "@context": "https://schema.org",
@@ -278,13 +300,33 @@ export default async function PersonPage({ params }) {
               )}
             </div>
 
-            {filmography.length > 0 && (
+            {directedMovies.length > 0 && (
               <div className="space-y-6 pt-10 border-t border-zinc-900">
-                <h2 className="text-2xl font-bold flex items-center gap-3">
-                  Known For <span className="text-zinc-500 text-sm font-normal">({credits.cast.length} credits)</span>
+                <h2 className="text-2xl font-bold flex items-center gap-3 text-cyan-400">
+                  Directed Movies <span className="text-zinc-500 text-sm font-normal">({directedMovies.length} credits)</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filmography.map((m) => (
+                  {directedMovies.map((m) => (
+                    <PersonMovieCard 
+                      key={m.id}
+                      movie={{
+                        ...m,
+                        title: m.title || m.name,
+                        release_date: m.release_date || m.first_air_date
+                      }} 
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {actingMovies.length > 0 && (
+              <div className="space-y-6 pt-10 border-t border-zinc-900">
+                <h2 className="text-2xl font-bold flex items-center gap-3 text-cyan-400">
+                  Acting Filmography <span className="text-zinc-500 text-sm font-normal">({actingMovies.length} credits)</span>
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {actingMovies.map((m) => (
                     <PersonMovieCard 
                       key={m.id}
                       movie={{
