@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getImagePath } from "@/utils/imagePath";
-import { Star, MapPin, Cake, User, Film } from "lucide-react";
-import MovieCard from "@/components/movie/MovieCard";
-import { getMovieUrl, getPersonUrl } from "@/utils/slugify";
+import { MapPin, Cake, User, Film } from "lucide-react";
+import { getPersonUrl } from "@/utils/slugify";
+import PersonFilmography from "@/components/profile/PersonFilmography";
 
 export const dynamic = "force-dynamic";
 
@@ -189,20 +189,12 @@ export default async function PersonPage({ params }) {
   // Get directed movies (crew credits with job === "Director")
   const directedMovies = uniqueCredits(
     credits?.crew?.filter(m => m.job === "Director" && m.poster_path) || []
-  ).sort((a, b) => {
-    const dateA = a.release_date || a.first_air_date || "";
-    const dateB = b.release_date || b.first_air_date || "";
-    return dateB.localeCompare(dateA); // Newest first
-  });
+  );
 
   // Get acting roles (cast credits)
   const actingMovies = uniqueCredits(
     credits?.cast?.filter(m => m.poster_path) || []
-  ).sort((a, b) => {
-    const dateA = a.release_date || a.first_air_date || "";
-    const dateB = b.release_date || b.first_air_date || "";
-    return dateB.localeCompare(dateA); // Newest first
-  });
+  );
 
   const personJsonLd = {
     "@context": "https://schema.org",
@@ -300,95 +292,18 @@ export default async function PersonPage({ params }) {
               )}
             </div>
 
-            {directedMovies.length > 0 && (
-              <div className="space-y-6 pt-10 border-t border-zinc-900">
-                <h2 className="text-2xl font-bold flex items-center gap-3 text-cyan-400">
-                  Directed Movies <span className="text-zinc-500 text-sm font-normal">({directedMovies.length} credits)</span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {directedMovies.map((m) => (
-                    <PersonMovieCard 
-                      key={m.id}
-                      movie={{
-                        ...m,
-                        title: m.title || m.name,
-                        release_date: m.release_date || m.first_air_date
-                      }} 
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {actingMovies.length > 0 && (
-              <div className="space-y-6 pt-10 border-t border-zinc-900">
-                <h2 className="text-2xl font-bold flex items-center gap-3 text-cyan-400">
-                  Acting Filmography <span className="text-zinc-500 text-sm font-normal">({actingMovies.length} credits)</span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {actingMovies.map((m) => (
-                    <PersonMovieCard 
-                      key={m.id}
-                      movie={{
-                        ...m,
-                        title: m.title || m.name,
-                        release_date: m.release_date || m.first_air_date
-                      }} 
-                    />
-                  ))}
-                </div>
+            {(directedMovies.length > 0 || actingMovies.length > 0) && (
+              <div className="pt-10 border-t border-zinc-900">
+                <PersonFilmography 
+                  initialDirected={directedMovies} 
+                  initialActing={actingMovies} 
+                />
               </div>
             )}
           </div>
         </div>
       </div>
     </main>
-  );
-}
-
-function PersonMovieCard({ movie }) {
-  return (
-    <Link 
-      href={getMovieUrl(movie.id, movie.title)}
-      className="group relative block rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 hover:border-red-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10"
-    >
-      <div className="aspect-[16/9] relative overflow-hidden">
-        {movie.backdrop_path ? (
-          <Image
-            src={getImagePath(movie.backdrop_path)}
-            alt={movie.title}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-700"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-zinc-800 flex items-center justify-center text-zinc-500 text-xs">
-            No Backdrop
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-        
-        {/* Rating Badge */}
-        <div className="absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold text-amber-400 flex items-center gap-1">
-          <Star size={10} fill="currentColor" />
-          {movie.vote_average?.toFixed(1) || "N/A"}
-        </div>
-      </div>
-
-      <div className="p-4 flex flex-col gap-1">
-        <h3 className="font-bold text-sm text-white group-hover:text-red-500 transition-colors truncate">
-          {movie.title}
-        </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
-            {movie.media_type === "tv" ? "TV Series" : "Movie"}
-          </span>
-          <span className="w-1 h-1 rounded-full bg-zinc-800" />
-          <span className="text-[10px] font-medium text-zinc-400">
-            {movie.release_date?.substring(0, 4)}
-          </span>
-        </div>
-      </div>
-    </Link>
   );
 }
 
