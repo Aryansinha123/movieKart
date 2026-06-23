@@ -43,32 +43,11 @@ function getSlideDuration(slide) {
   return 12000;
 }
 
-function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
+function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted, hasInteracted }) {
   const [embedSrc, setEmbedSrc] = useState(null);
   const iframeRef = useRef(null);
-  const [hasInteracted, setHasInteracted] = useState(false);
   const isMutedRef = useRef(isMuted);
   const hasInteractedRef = useRef(hasInteracted);
-
-  useEffect(() => {
-    const handleInteraction = () => {
-      setHasInteracted(true);
-    };
-
-    window.addEventListener("click", handleInteraction, { once: true });
-    window.addEventListener("touchstart", handleInteraction, { once: true });
-    window.addEventListener("keydown", handleInteraction, { once: true });
-
-    if (typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
-      setHasInteracted(true);
-    }
-
-    return () => {
-      window.removeEventListener("click", handleInteraction);
-      window.removeEventListener("touchstart", handleInteraction);
-      window.removeEventListener("keydown", handleInteraction);
-    };
-  }, []);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -171,7 +150,7 @@ function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted }) {
   );
 }
 
-const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, onVideoPlaying }) {
+const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, hasInteracted, onVideoPlaying }) {
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
 
@@ -185,17 +164,6 @@ const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parall
     }, 2000);
     return () => clearTimeout(timer);
   }, [isCurrent]);
-
-  useEffect(() => {
-    if (!isCurrent || !slide.trailerKey) return;
-
-    const fallbackTimer = setTimeout(() => {
-      setVideoPlaying(true);
-      onVideoPlaying?.();
-    }, 4500);
-
-    return () => clearTimeout(fallbackTimer);
-  }, [isCurrent, slide.trailerKey, onVideoPlaying]);
 
   useEffect(() => {
     if (!isCurrent) {
@@ -252,6 +220,7 @@ const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parall
                 onVideoPlaying?.();
               }}
               isMuted={isMuted}
+              hasInteracted={hasInteracted}
             />
           )}
         </motion.div>
@@ -460,6 +429,7 @@ export default function HeroCarousel() {
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [currentVideoReady, setCurrentVideoReady] = useState(false);
@@ -487,6 +457,27 @@ export default function HeroCarousel() {
   const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
   const parallaxX = useTransform(springX, [-0.5, 0.5], [-24, 24]);
   const parallaxY = useTransform(springY, [-0.5, 0.5], [-16, 16]);
+
+  // Listen to document interaction globally
+  useEffect(() => {
+    const handleInteraction = () => {
+      setHasInteracted(true);
+    };
+
+    window.addEventListener("click", handleInteraction, { once: true });
+    window.addEventListener("touchstart", handleInteraction, { once: true });
+    window.addEventListener("keydown", handleInteraction, { once: true });
+
+    if (typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
+      setHasInteracted(true);
+    }
+
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("touchstart", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadSlides() {
@@ -678,6 +669,7 @@ export default function HeroCarousel() {
                   isOutgoing={isOutgoing}
                   isPreload={isPreload}
                   isMuted={isMuted}
+                  hasInteracted={hasInteracted}
                   onVideoPlaying={handleVideoPlaying}
                 />
               </Link>
