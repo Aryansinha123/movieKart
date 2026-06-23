@@ -214,7 +214,7 @@ export default async function PersonPage({ params }) {
     <main className="min-h-screen bg-black text-white pb-20">
       <JsonLd data={personJsonLd} />
       {/* Header / Backdrop Area */}
-      <div className="relative h-[40vh] overflow-hidden">
+      <div className="relative h-[30vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-red-600/20 to-black z-0" />
         <div className="absolute inset-0 backdrop-blur-3xl z-0" />
         <div className="absolute inset-0 bg-black/40 z-10" />
