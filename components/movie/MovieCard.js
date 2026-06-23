@@ -12,7 +12,7 @@ import WatchedButton from "./WatchedButton";
 import FavoriteButton from "./FavoriteButton";
 import CollectionPicker from "../collection/CollectionPicker";
 import { useUserMovies } from "../providers/UserProvider";
-import { getMovieUrl } from "@/utils/slugify";
+import { getMovieUrl, getPersonUrl } from "@/utils/slugify";
 import ShatterEffect from "@/components/ui/ShatterEffect";
 
 const formatDate = (dateString) => {
@@ -128,7 +128,7 @@ export default function MovieCard({
       }`}
     >
       <div className={contentOpacityClass}>
-        <Link href={getMovieUrl(movie.id, movie.title)}>
+        <Link href={movie.media_type === "person" ? getPersonUrl(movie.id, movie.title) : getMovieUrl(movie.id, movie.title)}>
           <div className="relative">
             {movie.poster_path ? (
               <Image
@@ -193,6 +193,10 @@ export default function MovieCard({
                   <span className="text-xs font-medium text-zinc-300 bg-zinc-800/80 px-2 py-0.5 rounded-full">
                     {movie.release_date.substring(0, 4)}
                   </span>
+                ) : movie.media_type === "person" ? (
+                  <span className="text-xs font-medium text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                    {movie.known_for_department || "Person"}
+                  </span>
                 ) : null}
               </div>
             </div>
@@ -200,86 +204,88 @@ export default function MovieCard({
         </Link>
 
         {/* Hover Actions */}
-        <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 z-20">
-          <button
-            onClick={handleNotInterested}
-            className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-            title="Not Interested"
-          >
-            <EyeOff size={18} />
-          </button>
-
-          {mode === "watchlist" ? (
+        {movie.media_type !== "person" && (
+          <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 z-20">
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onRemove?.(movie.id);
-              }}
-              className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
-              title="Remove from watchlist"
-            >
-              <Trash2 size={18} />
-            </button>
-          ) : (
-            <WatchlistButton
-              movieId={movie.id}
+              onClick={handleNotInterested}
               className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+              title="Not Interested"
             >
-              <Bookmark size={18} />
-            </WatchlistButton>
-          )}
-          
-          {mode === "watched" ? (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onRemove?.(movie.id);
-              }}
-              className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
-              title="Remove from watched"
-            >
-              <Trash2 size={18} />
+              <EyeOff size={18} />
             </button>
-          ) : (
-            <WatchedButton
-              movieId={movie.id}
-              onSuccess={onWatchedSuccess}
-              className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-            >
-              <Check size={18} />
-            </WatchedButton>
-          )}
 
-          {mode === "favorites" ? (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onRemove?.(movie.id);
-              }}
-              className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
-              title="Remove from favorites"
-            >
-              <Trash2 size={18} />
-            </button>
-          ) : (
-            <FavoriteButton
-              movieId={movie.id}
-              className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-pink-500 hover:border-pink-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-            >
-              <Heart size={18} />
-            </FavoriteButton>
-          )}
+            {mode === "watchlist" ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRemove?.(movie.id);
+                }}
+                className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+                title="Remove from watchlist"
+              >
+                <Trash2 size={18} />
+              </button>
+            ) : (
+              <WatchlistButton
+                movieId={movie.id}
+                className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+              >
+                <Bookmark size={18} />
+              </WatchlistButton>
+            )}
+            
+            {mode === "watched" ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRemove?.(movie.id);
+                }}
+                className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+                title="Remove from watched"
+              >
+                <Trash2 size={18} />
+              </button>
+            ) : (
+              <WatchedButton
+                movieId={movie.id}
+                onSuccess={onWatchedSuccess}
+                className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+              >
+                <Check size={18} />
+              </WatchedButton>
+            )}
 
-          <CollectionPicker
-            movieId={movie.id}
-            className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-cyan-500 hover:border-cyan-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
-          >
-            <ListPlus size={18} />
-          </CollectionPicker>
-        </div>
+            {mode === "favorites" ? (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRemove?.(movie.id);
+                }}
+                className="p-2.5 rounded-full bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-xl backdrop-blur-md"
+                title="Remove from favorites"
+              >
+                <Trash2 size={18} />
+              </button>
+            ) : (
+              <FavoriteButton
+                movieId={movie.id}
+                className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-pink-500 hover:border-pink-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+              >
+                <Heart size={18} />
+              </FavoriteButton>
+            )}
+
+            <CollectionPicker
+              movieId={movie.id}
+              className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-cyan-500 hover:border-cyan-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
+            >
+              <ListPlus size={18} />
+            </CollectionPicker>
+          </div>
+        )}
       </div>
 
       {/* Glass Shatter Physics Simulation overlay */}

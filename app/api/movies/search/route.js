@@ -151,15 +151,32 @@ export async function GET(req) {
       return { ...item, _score: score };
     });
 
+    // Create results for the matching people (actors/directors) themselves
+    const peopleResults = topPeople.map((person, index) => {
+      const personBoost = index === 0 ? 15 : (index === 1 ? 8 : 4);
+      return {
+        id: person.id,
+        media_type: "person",
+        title: person.name,
+        poster_path: person.profile_path,
+        known_for_department: person.known_for_department,
+        matchReason: "person",
+        popularity: person.popularity,
+        _score: 30 + personBoost + Math.min((person.popularity || 0) / 10, 5)
+      };
+    });
+
+    const combinedResults = [...scored, ...peopleResults];
+
     return NextResponse.json(
-      scored
+      combinedResults
         .sort((a, b) => b._score - a._score)
         .slice(0, 25)
         .map(({ _score, _matchReason, _matchedCharacter, _matchedPerson, ...m }) => ({
           ...m,
-          matchReason: _matchReason,
-          matchedCharacter: _matchedCharacter,
-          matchedPerson: _matchedPerson
+          matchReason: _matchReason || m.matchReason,
+          matchedCharacter: _matchedCharacter || m.matchedCharacter,
+          matchedPerson: _matchedPerson || m.matchedPerson
         }))
     );
 

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Film } from "lucide-react";
+import { Search, Film, User } from "lucide-react";
 import Image from "next/image";
-import { getMovieUrl } from "@/utils/slugify";
+import { getMovieUrl, getPersonUrl } from "@/utils/slugify";
 
 export default function MovieSearch() {
   const router = useRouter();
@@ -61,7 +61,11 @@ export default function MovieSearch() {
     setOpen(false);
     setQuery("");
     setResults([]);
-    router.push(getMovieUrl(m.id, m.title));
+    if (m.media_type === "person") {
+      router.push(getPersonUrl(m.id, m.title));
+    } else {
+      router.push(getMovieUrl(m.id, m.title));
+    }
   }
 
   return (
@@ -106,6 +110,8 @@ export default function MovieSearch() {
                       height={48}
                       className="w-full h-full object-cover"
                     />
+                  ) : m.media_type === "person" ? (
+                    <User size={16} className="text-zinc-500" />
                   ) : (
                     <Film size={16} className="text-zinc-500" />
                   )}
@@ -115,7 +121,9 @@ export default function MovieSearch() {
                     {m.title}
                   </p>
                   <p className="text-[11px] text-zinc-500 truncate">
-                    {m.release_date ? m.release_date.split("-")[0] : "N/A"}
+                    {m.media_type === "person"
+                      ? (m.known_for_department || "Person")
+                      : (m.release_date ? m.release_date.split("-")[0] : "N/A")}
                   </p>
                 </div>
               </button>
