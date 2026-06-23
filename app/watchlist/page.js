@@ -100,7 +100,7 @@ export default function WatchlistPage() {
 
   const sortedMovies = useMemo(() => {
     const list = [...filteredMovies];
-    if (sortBy === "added") return list; // Keep original order
+    if (sortBy === "added") return list.reverse(); // Newest added first
     
     return list.sort((a, b) => {
       if (sortBy === "title") {

@@ -96,7 +96,7 @@ export default function WatchedPage() {
 
   const sortedMovies = useMemo(() => {
     const list = [...filteredMovies];
-    if (sortBy === "added") return list;
+    if (sortBy === "added") return list.reverse();
 
     return list.sort((a, b) => {
       if (sortBy === "title") {
