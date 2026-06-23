@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { searchMovies, mapTmdbResult, fetchCredits, tmdbRequest } from "@/lib/tmdb";
+import { 
+  searchMovies, 
+  mapTmdbResult, 
+  fetchCredits, 
+  tmdbRequest, 
+  searchPeople, 
+  fetchPersonCredits 
+} from "@/lib/tmdb";
 
 export async function GET(req) {
   try {
@@ -17,15 +24,45 @@ export async function GET(req) {
     const expandedResults = [];
     const seenIds = new Set();
 
-    // Helper to add results uniquely
-    const addResult = (item, matchReason = "title") => {
+    // Helper to add results uniquely and resolve priority of match reasons
+    const addResult = (item, matchReason = "title", matchedPersonName = null, matchedCharacterName = null, personIndex = -1) => {
       if (!item || !item.id) return;
       const mapped = mapTmdbResult(item);
       if (!mapped) return;
       
-      if (!seenIds.has(mapped.id)) {
-        seenIds.add(mapped.id);
-        expandedResults.push({ ...mapped, _matchReason: matchReason });
+      const id = mapped.id;
+      // Calculate person relevance boost: index 0 -> 12, index 1 -> 5, index 2 -> 2, otherwise 0
+      const personBoost = personIndex === 0 ? 12 : (personIndex === 1 ? 5 : (personIndex === 2 ? 2 : 0));
+
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        expandedResults.push({ 
+          ...mapped, 
+          _matchReason: matchReason,
+          _matchedPerson: matchedPersonName,
+          _matchedCharacter: matchedCharacterName,
+          _personBoost: personBoost
+        });
+      } else {
+        const existing = expandedResults.find(r => r.id === id);
+        if (existing) {
+          const reasonPriority = { director: 4, actor: 3, character: 2, title: 1 };
+          const existingPriority = reasonPriority[existing._matchReason] || 0;
+          const newPriority = reasonPriority[matchReason] || 0;
+          
+          // Update person boost if this is a stronger/more relevant person match
+          if (personBoost > (existing._personBoost || 0)) {
+            existing._personBoost = personBoost;
+            existing._matchedPerson = matchedPersonName;
+          }
+
+          if (newPriority > existingPriority) {
+            existing._matchReason = matchReason;
+            if (matchedCharacterName) {
+              existing._matchedCharacter = matchedCharacterName;
+            }
+          }
+        }
       }
     };
 
@@ -38,11 +75,35 @@ export async function GET(req) {
       }
     }
 
+    // 1.5. Person Search Layer (Actors & Directors)
+    const personData = await searchPeople(query);
+    const people = personData.results || [];
+    const topPeople = people.slice(0, 3);
+
+    const peopleCredits = await Promise.all(
+      topPeople.map(async (person, index) => {
+        const credits = await fetchPersonCredits(person.id);
+        return { person, credits, index };
+      })
+    );
+
+    for (const { person, credits, index } of peopleCredits) {
+      if (Array.isArray(credits.crew)) {
+        credits.crew.forEach(item => {
+          if (item.job === "Director") {
+            addResult(item, "director", person.name, null, index);
+          }
+        });
+      }
+      if (Array.isArray(credits.cast)) {
+        credits.cast.forEach(item => {
+          addResult(item, "actor", person.name, null, index);
+        });
+      }
+    }
+
     // 2. Character Matching Layer
-    // If we have few results or to enrich search, check popular movies for character matches
-    // But a better way: check the cast of the movies returned in the search to see if the query matches a character name
-    // AND check trending movies for character matches
-    
+    // Check trending movies and results for character matches
     const trendingRes = await tmdbRequest("/trending/all/day");
     const trendingData = await trendingRes.json();
     const trendingPool = (trendingData.results || []).slice(0, 15);
@@ -58,24 +119,34 @@ export async function GET(req) {
           (c.name && c.name.toLowerCase().includes(queryLower))
         );
         if (matchedChar) {
-          return { ...item, _matchReason: "character", _matchedCharacter: matchedChar.character };
+          return { 
+            ...item, 
+            _matchReason: "character", 
+            _matchedCharacter: matchedChar.character,
+            _matchedPerson: matchedChar.name
+          };
         }
         return null;
       })
     );
 
-    creditMatches.filter(Boolean).forEach(m => addResult(m, "character"));
+    creditMatches.filter(Boolean).forEach(m => addResult(m, "character", m._matchedPerson, m._matchedCharacter));
 
     // 3. Final Scoring and Ranking
     const scored = expandedResults.map(item => {
       let score = 0;
       if (item.title?.toLowerCase().includes(queryLower)) score += 10;
+      if (item._matchReason === "director") score += 9;
       if (item._matchReason === "character") score += 8;
-      if (item._matchReason === "actor") score += 6;
+      if (item._matchReason === "actor") score += 7;
       
-      // Popularity boost
+      // Add the person index relevance boost
+      score += (item._personBoost || 0);
+
+      // Popularity & Vote count boost to favor well-known blockbusters
       score += (item.vote_average || 0);
-      score += Math.min((item.popularity || 0) / 100, 5);
+      score += Math.min((item.popularity || 0) / 50, 8);
+      score += Math.min(Math.log10((item.vote_count || 0) + 1) * 2.5, 10);
       
       return { ...item, _score: score };
     });
@@ -84,10 +155,11 @@ export async function GET(req) {
       scored
         .sort((a, b) => b._score - a._score)
         .slice(0, 25)
-        .map(({ _score, _matchReason, _matchedCharacter, ...m }) => ({
+        .map(({ _score, _matchReason, _matchedCharacter, _matchedPerson, ...m }) => ({
           ...m,
           matchReason: _matchReason,
-          matchedCharacter: _matchedCharacter
+          matchedCharacter: _matchedCharacter,
+          matchedPerson: _matchedPerson
         }))
     );
 
