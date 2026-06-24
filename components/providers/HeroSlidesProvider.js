@@ -22,15 +22,28 @@ async function enrichSlidesWithTrailers(slides) {
   );
 }
 
+function dedupeById(arr) {
+  const seen = new Set();
+  return arr.filter((s) => {
+    if (!s?.id || seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  });
+}
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
+
 export function HeroSlidesProvider({ children }) {
-  // Slides are stored here and never reset on route change
   const [slides, setSlides] = useState([]);
   const [slidesLoading, setSlidesLoading] = useState(true);
-  const didFetch = useRef(false);
+  // Only lock once we have successfully loaded slides
+  const hasSlidesRef = useRef(false);
+  const retryCountRef = useRef(0);
 
   const loadSlides = useCallback(async () => {
-    if (didFetch.current) return; // already loaded – skip
-    didFetch.current = true;
+    // Skip if we already have slides successfully loaded
+    if (hasSlidesRef.current) return;
 
     try {
       const token =
@@ -44,32 +57,42 @@ export function HeroSlidesProvider({ children }) {
       const data = await res.json();
 
       if (data?.slides?.length) {
-        const seen = new Set();
-        const uniqueSlides = data.slides.filter((s) => {
-          if (seen.has(s.id)) return false;
-          seen.add(s.id);
-          return true;
-        });
-        // Show slides immediately (without trailers) so carousel appears fast
+        // Lock — we have slides, never re-fetch
+        hasSlidesRef.current = true;
+        retryCountRef.current = 0;
+
+        const uniqueSlides = dedupeById(data.slides);
+
+        // Show slides immediately so carousel appears without waiting for trailers
         setSlides(uniqueSlides);
         setSlidesLoading(false);
 
-        // Enrich with trailers in the background
-        const withTrailers = await enrichSlidesWithTrailers(uniqueSlides);
-        const seen2 = new Set();
-        const finalUnique = withTrailers.filter((s) => {
-          if (seen2.has(s.id)) return false;
-          seen2.add(s.id);
-          return true;
-        });
-        setSlides(finalUnique);
+        // Enrich with trailers in the background (non-blocking)
+        enrichSlidesWithTrailers(uniqueSlides)
+          .then((withTrailers) => setSlides(dedupeById(withTrailers)))
+          .catch(() => {}); // trailer enrichment failure is non-fatal
+
         return;
       }
+
+      // API responded but returned empty/error — schedule retry
+      throw new Error(data?.message || "Hero API returned empty slides");
+
     } catch (err) {
       console.error("[HeroSlidesProvider] Failed to load slides:", err.message);
-      setSlides([]);
-    } finally {
-      setSlidesLoading(false);
+
+      if (retryCountRef.current < MAX_RETRIES) {
+        retryCountRef.current += 1;
+        const delay = RETRY_DELAY_MS * retryCountRef.current;
+        console.log(
+          `[HeroSlidesProvider] Retrying in ${delay}ms (attempt ${retryCountRef.current}/${MAX_RETRIES})...`
+        );
+        setTimeout(loadSlides, delay);
+      } else {
+        // All retries exhausted — stop spinner, show nothing
+        console.error("[HeroSlidesProvider] All retries exhausted. Giving up.");
+        setSlidesLoading(false);
+      }
     }
   }, []);
 
