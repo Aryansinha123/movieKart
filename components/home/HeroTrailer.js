@@ -2,54 +2,45 @@ import { useEffect, useRef, useState, memo } from "react";
 import { getYoutubeEmbedUrl } from "@/lib/trailers";
 
 /**
- * HeroTrailer — persistent iframe player for the hero carousel.
+ * HeroTrailer — persistent iframe player.
  *
- * z-index note: This component renders inside a z-20 container in HeroCarousel.
- * The CSS class hero-trailer-wrap previously set z-index:0 via globals.css — that
- * class is no longer applied here to avoid z-index fights. Layout is handled by
- * the parent container (absolute inset-0 z-20 in HeroCarousel).
- *
- * Netflix-style flow:
- *   1. iframe loads silently in background (opacity: 0)
- *   2. YouTube postMessage playerState=1 fires → videoPlaying = true
- *   3. Opacity transitions to 1 over 800ms
- *   4. HeroSlide poster scrims fade out (via isTrailerPlaying prop)
+ * Architecture:
+ * - Rendered inside a z-20 container in HeroCarousel (above poster z-10).
+ * - YouTube postMessage commands are sent for play/pause/mute.
+ * - A 2-second fallback timer shows the trailer even if YouTube never fires
+ *   playerState=1 (happens with bare embeds without IFrame API JS library).
  */
 export default memo(function HeroTrailer({
   slideIdx,
   videoKey,
   isCurrent,
+  isCarouselPlaying,
   isMuted,
   hasInteracted,
   onPlaying,
 }) {
   const iframeRef = useRef(null);
   const [embedSrc, setEmbedSrc] = useState(null);
-  const [videoPlaying, setVideoPlaying] = useState(false);
+  // videoVisible: true once we're confident the video is playing (postMessage OR fallback timer)
+  const [videoVisible, setVideoVisible] = useState(false);
+  const videoVisibleRef = useRef(false);
   const loadStart = useRef(null);
-  const isLoaded = useRef(false);
   const retryRef = useRef(null);
-  // Track whether videoPlaying is true in a ref for the retry callback
-  const videoPlayingRef = useRef(false);
+  const fallbackTimerRef = useRef(null);
 
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-  console.log(
-    `[HeroTrailer] render #${renderCount.current} | key=${videoKey} | isCurrent=${isCurrent} | videoPlaying=${videoPlaying}`
-  );
-
-  // Set embed URL once on mount (or if videoKey changes)
+  // ── Embed URL setup ──────────────────────────────────────────────
   useEffect(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, true));
+    const url = getYoutubeEmbedUrl(videoKey, origin, /* startMuted= */ true);
+    setEmbedSrc(url);
     loadStart.current = performance.now();
-    // Reset state when video key changes
-    setVideoPlaying(false);
-    videoPlayingRef.current = false;
-    isLoaded.current = false;
+    // Reset when video key changes
+    setVideoVisible(false);
+    videoVisibleRef.current = false;
+    console.log(`[HeroTrailer] Embed URL set for key=${videoKey}: ${url}`);
   }, [videoKey]);
 
-  // ── postMessage helper ────────────────────────────────────────────
+  // ── postMessage helper ───────────────────────────────────────────
   const sendCommand = (func, args = []) => {
     if (iframeRef.current?.contentWindow) {
       try {
@@ -57,119 +48,169 @@ export default memo(function HeroTrailer({
           JSON.stringify({ event: "command", func, args }),
           "*"
         );
+        console.log(`[HeroTrailer] postMessage sent: ${func}`, args);
       } catch {
-        // Suppress cross-origin errors
+        // suppress cross-origin errors
       }
     }
   };
 
   /**
-   * Retry playVideo every 400ms until YouTube confirms state=1.
-   * Capped at 10 s (25 attempts) to avoid infinite loops on blocked autoplay.
+   * Marks the trailer as visible and notifies parent.
+   * Called either by postMessage confirmation OR fallback timer.
    */
-  const sendCommandWithRetry = (func, args = []) => {
+  const markVisible = (source) => {
+    if (videoVisibleRef.current) return;
+    videoVisibleRef.current = true;
+    setVideoVisible(true);
+    clearInterval(retryRef.current);
+    clearTimeout(fallbackTimerRef.current);
+    const loadTime = loadStart.current ? (performance.now() - loadStart.current).toFixed(0) : "?";
+    console.log(`[HeroTrailer] Trailer VISIBLE via ${source} for key=${videoKey} (${loadTime}ms)`);
+    onPlaying?.(slideIdx);
+  };
+
+  /**
+   * Retry playVideo every 400ms until confirmed.
+   * Capped at 10s (25 attempts).
+   */
+  const startPlayWithRetry = () => {
     clearInterval(retryRef.current);
     let attempts = 0;
-    const MAX_ATTEMPTS = 25; // 25 × 400ms = 10s cap
     retryRef.current = setInterval(() => {
-      if (videoPlayingRef.current || attempts >= MAX_ATTEMPTS) {
+      if (videoVisibleRef.current || attempts >= 25) {
         clearInterval(retryRef.current);
         return;
       }
-      sendCommand(func, args);
+      sendCommand("playVideo");
       attempts++;
     }, 400);
   };
 
-  const effectiveMuteState = isMuted || !hasInteracted;
+  /**
+   * Start 2-second fallback: if YouTube never confirms playerState=1
+   * (which happens when the IFrame API JS library isn't loaded),
+   * we assume the video is playing and show it anyway.
+   */
+  const startFallbackTimer = () => {
+    clearTimeout(fallbackTimerRef.current);
+    fallbackTimerRef.current = setTimeout(() => {
+      if (!videoVisibleRef.current) {
+        console.log(`[HeroTrailer] Fallback timer fired — showing trailer for key=${videoKey}`);
+        markVisible("fallback-timer");
+      }
+    }, 2000);
+  };
 
-  // Sync play/pause on slide activation — start retry on becoming current
+  // ── Play/pause sync on slide activation ─────────────────────────
   useEffect(() => {
     if (!embedSrc) return;
 
+    const effectiveMuted = isMuted || !hasInteracted;
+
     if (isCurrent) {
-      sendCommandWithRetry("playVideo");
-      sendCommand(effectiveMuteState ? "mute" : "unMute");
+      sendCommand("playVideo");
+      sendCommand(effectiveMuted ? "mute" : "unMute");
       sendCommand("setVolume", [100]);
+      startPlayWithRetry();
+      startFallbackTimer();
     } else {
       clearInterval(retryRef.current);
+      clearTimeout(fallbackTimerRef.current);
       sendCommand("pauseVideo");
       sendCommand("mute");
-      setVideoPlaying(false);
-      videoPlayingRef.current = false;
+      // Reset visibility for when this slide becomes current again
+      setVideoVisible(false);
+      videoVisibleRef.current = false;
     }
 
-    return () => clearInterval(retryRef.current);
+    return () => {
+      clearInterval(retryRef.current);
+      clearTimeout(fallbackTimerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCurrent, embedSrc]);
 
-  // Sync mute state independently
+  // ── Pause/resume when carousel play state toggles ────────────────
   useEffect(() => {
     if (!embedSrc || !isCurrent) return;
-    sendCommand(effectiveMuteState ? "mute" : "unMute");
-    if (!effectiveMuteState) sendCommand("setVolume", [100]);
-  }, [effectiveMuteState, isCurrent, embedSrc]); // eslint-disable-line
+    if (isCarouselPlaying === false) {
+      sendCommand("pauseVideo");
+      console.log("[HeroTrailer] Carousel paused — pausing trailer");
+    } else {
+      sendCommand("playVideo");
+      console.log("[HeroTrailer] Carousel resumed — resuming trailer");
+    }
+  }, [isCarouselPlaying, isCurrent, embedSrc]); // eslint-disable-line
 
-  // Listen for YouTube player state messages
+  // ── Mute sync ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!embedSrc || !isCurrent) return;
+    const effectiveMuted = isMuted || !hasInteracted;
+    sendCommand(effectiveMuted ? "mute" : "unMute");
+    if (!effectiveMuted) sendCommand("setVolume", [100]);
+  }, [isMuted, hasInteracted, isCurrent, embedSrc]); // eslint-disable-line
+
+  // ── Listen for YouTube playerState postMessage events ────────────
   useEffect(() => {
     if (!embedSrc) return;
 
     const handleMessage = (event) => {
+      // Validate the message is from our iframe
       if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
 
+      let data;
       try {
-        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
-        // playerState === 1 means PLAYING
-        const isPlayingState =
-          (data.event === "infoDelivery" && data.info?.playerState === 1) ||
-          (data.event === "initialDelivery" && data.info?.playerState === 1) ||
-          (data.event === "onStateChange" && data.info === 1);
-
-        if (isPlayingState && !videoPlayingRef.current) {
-          clearInterval(retryRef.current);
-          videoPlayingRef.current = true;
-          setVideoPlaying(true);
-
-          if (!isLoaded.current) {
-            isLoaded.current = true;
-            if (loadStart.current) {
-              const loadTime = performance.now() - loadStart.current;
-              console.log(`[HeroTrailer] Trailer ${videoKey} confirmed playing. Load time: ${loadTime.toFixed(0)}ms`);
-            }
-          }
-
-          // Notify parent with the slide index so it knows which slide is playing
-          onPlaying?.(slideIdx);
-        }
+        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
       } catch {
-        // Ignore JSON parse errors
+        return;
+      }
+
+      const playerState =
+        data.info?.playerState ??
+        (data.event === "onStateChange" ? data.info : undefined);
+
+      console.log(`[HeroTrailer] postMessage received: event=${data.event} playerState=${playerState}`);
+
+      // playerState 1 = PLAYING
+      if (playerState === 1) {
+        markVisible("postMessage-playerState=1");
+      }
+
+      // playerState -1 = UNSTARTED (video loaded, not yet playing) — attempt play
+      if (playerState === -1 && isCurrent) {
+        sendCommand("playVideo");
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [embedSrc, onPlaying, videoKey, slideIdx]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedSrc, slideIdx, isCurrent]);
 
-  // Cleanup retry interval on unmount
+  // ── Cleanup on unmount ───────────────────────────────────────────
   useEffect(() => {
-    return () => clearInterval(retryRef.current);
+    return () => {
+      clearInterval(retryRef.current);
+      clearTimeout(fallbackTimerRef.current);
+    };
   }, []);
 
   if (!embedSrc) return null;
 
   return (
-    // No hero-trailer-wrap class — that class sets z-index:0 which fights the parent z-20
     <div
-      className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out overflow-hidden pointer-events-none"
+      className="absolute inset-0 overflow-hidden pointer-events-none"
       style={{
-        opacity: isCurrent && videoPlaying ? 1 : 0,
+        // Fade in when visible, instant fade out when changing slides
+        opacity: isCurrent && videoVisible ? 1 : 0,
+        transition: isCurrent ? "opacity 800ms ease-in-out" : "none",
       }}
     >
       <iframe
         ref={iframeRef}
         src={embedSrc}
-        title="Official trailer"
+        title="Movie trailer"
         className="hero-trailer-iframe"
         allow="autoplay; encrypted-media; picture-in-picture"
         referrerPolicy="strict-origin-when-cross-origin"

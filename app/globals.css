@@ -107,6 +107,8 @@ body {
   left: 50%;
   width: max(100vw, 177.78vh);
   height: max(56.25vw, 100vh);
+  min-width: 100%;
+  min-height: 100%;
   transform: translate(-50%, -50%);
   border: 0;
   pointer-events: none;
@@ -120,7 +122,7 @@ body {
 .hero-content-layer {
   position: relative;
   z-index: 30;
-  isolation: isolate;
+  /* isolation: isolate intentionally removed — was creating an unwanted stacking context */
 }
 
 @keyframes pulse-live {

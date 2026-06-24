@@ -313,6 +313,7 @@ export default function HeroCarousel() {
                 slideIdx={idx}
                 videoKey={s.trailerKey}
                 isCurrent={isCurrent}
+                isCarouselPlaying={isPlaying}
                 isMuted={isMuted}
                 hasInteracted={hasInteracted}
                 onPlaying={handleVideoPlaying}
