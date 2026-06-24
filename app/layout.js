@@ -88,6 +88,7 @@ export const metadata = {
 
 import { UserProvider } from "@/components/providers/UserProvider";
 import { RecentSearchesProvider } from "@/components/providers/RecentSearchesProvider";
+import { HeroSlidesProvider } from "@/components/providers/HeroSlidesProvider";
 
 import Footer from "@/components/Footer";
 
@@ -132,12 +133,14 @@ export default function RootLayout({ children }) {
         <JsonLd data={organizationJsonLd} />
         <UserProvider>
           <RecentSearchesProvider>
-            <Navbar />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-            <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+            <HeroSlidesProvider>
+              <Navbar />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+              <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+            </HeroSlidesProvider>
           </RecentSearchesProvider>
         </UserProvider>
       </body>

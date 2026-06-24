@@ -71,35 +71,60 @@ function CollectionComments({ collectionMongoId }) {
   }
 
   return (
-    <section className="mt-12 rounded-2xl border border-zinc-800 bg-zinc-950/50 p-6">
-      <h2 className="text-lg font-bold">Comments</h2>
-      <ul className="mt-4 space-y-3">
+    <section className="mt-12 rounded-2xl border border-zinc-800 bg-zinc-950/50 p-5 md:p-8">
+      <h2 className="text-lg font-bold mb-4">Comments</h2>
+
+      {comments.length === 0 && (
+        <p className="text-sm text-zinc-500 mb-4">No comments yet. Be the first!</p>
+      )}
+
+      <ul className="space-y-4 mb-6">
         {comments.map((c) => (
-          <li key={c._id} className="text-sm border-b border-zinc-800/80 pb-3">
-            <span className="font-semibold text-white">{c.username}</span>
-            <p className="text-zinc-300 mt-1 whitespace-pre-wrap">{c.body}</p>
+          <li key={c._id} className="flex gap-3 border-b border-zinc-800/60 pb-4 last:border-0">
+            {/* Avatar initial */}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white select-none">
+              {c.username?.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold text-white">{c.username}</span>
+                {c.createdAt && (
+                  <span className="text-[11px] text-zinc-600">
+                    {new Date(c.createdAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                {c.body}
+              </p>
+            </div>
           </li>
         ))}
       </ul>
+
       {token ? (
-        <form onSubmit={submit} className="mt-4">
+        <form onSubmit={submit} className="flex flex-col gap-2">
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={2}
+            rows={3}
             maxLength={2000}
-            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-sm"
+            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-sm resize-none focus:outline-none focus:border-purple-500/50 transition-colors placeholder:text-zinc-600"
             placeholder="Add a comment…"
           />
-          <button
-            type="submit"
-            className="mt-2 text-sm px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 font-medium cursor-pointer"
-          >
-            Post
-          </button>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-zinc-600">{body.length}/2000</span>
+            <button
+              type="submit"
+              disabled={!body.trim()}
+              className="text-sm px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium cursor-pointer transition-colors"
+            >
+              Post
+            </button>
+          </div>
         </form>
       ) : (
-        <p className="mt-4 text-sm text-zinc-500">Sign in to join the discussion.</p>
+        <p className="text-sm text-zinc-500">Sign in to join the discussion.</p>
       )}
     </section>
   );
@@ -559,7 +584,11 @@ export default function CollectionViewPage() {
         )}
       </section>
 
-      {collection.isPublic && <CollectionComments collectionMongoId={id} />}
+      {collection.isPublic && (
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10 pb-4">
+          <CollectionComments collectionMongoId={id} />
+        </div>
+      )}
 
       {editOpen && (
         <CollectionEditModal

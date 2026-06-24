@@ -2,8 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, Profiler } from "react";
-import Link from "next/link";
-import { getMovieUrl } from "@/utils/slugify";
+import { useHeroSlides } from "@/components/providers/HeroSlidesProvider";
 import HeroSlide from "./HeroSlide";
 import HeroTrailer from "./HeroTrailer";
 import HeroControls from "./HeroControls";
@@ -11,33 +10,17 @@ import HeroControls from "./HeroControls";
 const BASE_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
-function getSlideDuration(slide) {
+function getSlideDuration() {
   return 12000;
 }
 
-async function enrichSlidesWithTrailers(slides) {
-  return Promise.all(
-    slides.map(async (slide) => {
-      if (slide.trailerKey) return slide;
-      try {
-        const res = await fetch(`/api/movies/${slide.id}/trailer`);
-        const data = await res.json();
-        if (data?.trailerKey) {
-          return { ...slide, trailerKey: data.trailerKey };
-        }
-      } catch {
-        // keep slide without trailer
-      }
-      return slide;
-    })
-  );
-}
-
 export default function HeroCarousel() {
-  const [slides, setSlides] = useState([]);
+  // ── Slides from global persistent cache ─────────────────────────
+  const { slides, slidesLoading } = useHeroSlides();
+
+  // ── Local UI state (resets are OK here – these are view-layer) ──
   const [current, setCurrent] = useState(0);
   const [prevCurrent, setPrevCurrent] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -66,9 +49,9 @@ export default function HeroCarousel() {
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(
-        window.matchMedia("(max-width: 768px)").matches || 
-        ('ontouchstart' in window) || 
-        (navigator.maxTouchPoints > 0)
+        window.matchMedia("(max-width: 768px)").matches ||
+          "ontouchstart" in window ||
+          navigator.maxTouchPoints > 0
       );
     };
     checkMobile();
@@ -78,7 +61,7 @@ export default function HeroCarousel() {
 
   // RequestAnimationFrame Parallax loop
   const updateParallax = () => {
-    currentX.current += (targetX.current - currentX.current) * 0.08; // smooth LERP
+    currentX.current += (targetX.current - currentX.current) * 0.08;
     currentY.current += (targetY.current - currentY.current) * 0.08;
 
     if (containerRef.current) {
@@ -86,7 +69,10 @@ export default function HeroCarousel() {
       containerRef.current.style.setProperty("--parallax-y", `${currentY.current.toFixed(2)}px`);
     }
 
-    if (Math.abs(targetX.current - currentX.current) > 0.01 || Math.abs(targetY.current - currentY.current) > 0.01) {
+    if (
+      Math.abs(targetX.current - currentX.current) > 0.01 ||
+      Math.abs(targetY.current - currentY.current) > 0.01
+    ) {
       rafRef.current = requestAnimationFrame(updateParallax);
     } else {
       rafRef.current = null;
@@ -96,12 +82,11 @@ export default function HeroCarousel() {
   const handleMouseMove = (e) => {
     if (isMobile || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const pctX = ((e.clientX - rect.left) / rect.width) - 0.5;
-    const pctY = ((e.clientY - rect.top) / rect.height) - 0.5;
+    const pctX = (e.clientX - rect.left) / rect.width - 0.5;
+    const pctY = (e.clientY - rect.top) / rect.height - 0.5;
 
-    // Reduced range (8px - 12px) for optimized visual stability
-    targetX.current = pctX * 20; // [-10px, 10px]
-    targetY.current = pctY * 16; // [-8px, 8px]
+    targetX.current = pctX * 20;
+    targetY.current = pctY * 16;
 
     if (!rafRef.current) {
       rafRef.current = requestAnimationFrame(updateParallax);
@@ -174,47 +159,12 @@ export default function HeroCarousel() {
     };
   }, []);
 
-  // Ingest slides and load trailers
+  // ── Clamp `current` when slides shrink (e.g., fresh load) ───────
   useEffect(() => {
-    async function loadSlides() {
-      try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        const headers = {};
-        if (token && token !== "null" && token !== "undefined") {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        const res = await fetch("/api/hero", { headers });
-        const data = await res.json();
-        if (data?.slides?.length) {
-          const seen = new Set();
-          const uniqueSlides = data.slides.filter((s) => {
-            if (seen.has(s.id)) return false;
-            seen.add(s.id);
-            return true;
-          });
-          setSlides(uniqueSlides);
-          setLoading(false);
-          
-          const withTrailers = await enrichSlidesWithTrailers(uniqueSlides);
-          const seen2 = new Set();
-          const finalUnique = withTrailers.filter((s) => {
-            if (seen2.has(s.id)) return false;
-            seen2.add(s.id);
-            return true;
-          });
-          setSlides(finalUnique);
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to load slides:", err.message);
-        setSlides([]);
-      } finally {
-        setLoading(false);
-      }
+    if (slides.length > 0 && current >= slides.length) {
+      setCurrent(0);
     }
-    loadSlides();
-  }, []);
+  }, [slides.length, current]);
 
   const goTo = useCallback(
     (index) => {
@@ -253,7 +203,7 @@ export default function HeroCarousel() {
 
   useEffect(() => {
     if (!isTimerActive || slides.length <= 1 || isDragging.current) return;
-    
+
     const timer = setTimeout(next, slideDuration);
     return () => clearTimeout(timer);
   }, [isTimerActive, current, slideDuration, next, slides.length]);
@@ -279,7 +229,7 @@ export default function HeroCarousel() {
     else if (delta < -SWIPE_THRESHOLD) next();
   };
 
-  if (loading) {
+  if (slidesLoading) {
     return (
       <section className="relative w-full h-[70vh] md:h-[88vh] bg-[#050505] overflow-hidden">
         <div className="absolute inset-0 hero-shimmer" />
@@ -332,7 +282,7 @@ export default function HeroCarousel() {
 
             if (!isCurrent && !isOutgoing && !isPreload) return null;
 
-            const zIndex = isCurrent ? 10 : (isOutgoing ? 5 : 0);
+            const zIndex = isCurrent ? 10 : isOutgoing ? 5 : 0;
 
             return (
               <div
@@ -358,15 +308,16 @@ export default function HeroCarousel() {
           })}
         </div>
 
-        {/* Centralized persistent trailer preloader cache pool (above backdrops, below scrimmage cards) */}
+        {/* Centralized persistent trailer preloader cache pool */}
         <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
           {slides.map((s, idx) => {
             const isCurrent = idx === current;
             const isPreload = idx === (current + 1) % slides.length;
-            const shouldMount = s.trailerKey && (loadedTrailerKeys.has(s.trailerKey) || isCurrent || isPreload);
-            
+            const shouldMount =
+              s.trailerKey && (loadedTrailerKeys.has(s.trailerKey) || isCurrent || isPreload);
+
             if (!shouldMount) return null;
-            
+
             return (
               <HeroTrailer
                 key={s.id}
@@ -391,8 +342,8 @@ export default function HeroCarousel() {
           onGoTo={goTo}
           onPrev={prev}
           onNext={next}
-          onTogglePlay={() => setIsPlaying(p => !p)}
-          onToggleMute={() => setIsMuted(m => !m)}
+          onTogglePlay={() => setIsPlaying((p) => !p)}
+          onToggleMute={() => setIsMuted((m) => !m)}
         />
 
         <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
