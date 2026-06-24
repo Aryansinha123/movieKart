@@ -11,7 +11,7 @@ const BASE_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
 function getSlideDuration() {
-  return 12000;
+  return 20000;
 }
 
 export default function HeroCarousel() {
