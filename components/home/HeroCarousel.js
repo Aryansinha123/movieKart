@@ -18,7 +18,7 @@ export default function HeroCarousel() {
   // ── Slides from global persistent cache ─────────────────────────
   const { slides, slidesLoading } = useHeroSlides();
 
-  // ── Local UI state (resets are OK here – these are view-layer) ──
+  // ── Local UI state ───────────────────────────────────────────────
   const [current, setCurrent] = useState(0);
   const [prevCurrent, setPrevCurrent] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -29,6 +29,8 @@ export default function HeroCarousel() {
   const [currentVideoReady, setCurrentVideoReady] = useState(false);
   const [loadedTrailerKeys, setLoadedTrailerKeys] = useState(new Set());
   const [isMobile, setIsMobile] = useState(false);
+  // Tracks which slide index is actively playing video (for poster fade)
+  const [playingIdx, setPlayingIdx] = useState(null);
 
   const containerRef = useRef(null);
   const dragStartX = useRef(0);
@@ -84,10 +86,8 @@ export default function HeroCarousel() {
     const rect = containerRef.current.getBoundingClientRect();
     const pctX = (e.clientX - rect.left) / rect.width - 0.5;
     const pctY = (e.clientY - rect.top) / rect.height - 0.5;
-
     targetX.current = pctX * 20;
     targetY.current = pctY * 16;
-
     if (!rafRef.current) {
       rafRef.current = requestAnimationFrame(updateParallax);
     }
@@ -104,9 +104,7 @@ export default function HeroCarousel() {
 
   useEffect(() => {
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
@@ -125,12 +123,13 @@ export default function HeroCarousel() {
     });
   }, [current, slides]);
 
-  // Reset video ready state on slide change
+  // Reset video ready state AND playing index on slide change
   useEffect(() => {
     setCurrentVideoReady(false);
+    setPlayingIdx(null);
   }, [current]);
 
-  // Handle slide fade-out delay (800ms Snappy Transition)
+  // Handle slide fade-out delay
   useEffect(() => {
     const timer = setTimeout(() => {
       setPrevCurrent(current);
@@ -140,18 +139,13 @@ export default function HeroCarousel() {
 
   // Global user interaction observer
   useEffect(() => {
-    const handleInteraction = () => {
-      setHasInteracted(true);
-    };
-
+    const handleInteraction = () => setHasInteracted(true);
     window.addEventListener("click", handleInteraction, { once: true });
     window.addEventListener("touchstart", handleInteraction, { once: true });
     window.addEventListener("keydown", handleInteraction, { once: true });
-
     if (typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
       setHasInteracted(true);
     }
-
     return () => {
       window.removeEventListener("click", handleInteraction);
       window.removeEventListener("touchstart", handleInteraction);
@@ -159,11 +153,9 @@ export default function HeroCarousel() {
     };
   }, []);
 
-  // ── Clamp `current` when slides shrink (e.g., fresh load) ───────
+  // Clamp `current` when slides shrink
   useEffect(() => {
-    if (slides.length > 0 && current >= slides.length) {
-      setCurrent(0);
-    }
+    if (slides.length > 0 && current >= slides.length) setCurrent(0);
   }, [slides.length, current]);
 
   const goTo = useCallback(
@@ -177,38 +169,38 @@ export default function HeroCarousel() {
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
-  // Arrow key navigation support
+  // Arrow key navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "ArrowLeft") {
-        prev();
-      } else if (e.key === "ArrowRight") {
-        next();
-      }
+      if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [next, prev]);
 
-  // Stable playing callback
-  const handleVideoPlaying = useCallback(() => {
-    setCurrentVideoReady(true);
-  }, []);
+  // Called by HeroTrailer when YouTube confirms playback (playerState=1)
+  const handleVideoPlaying = useCallback(
+    (idx) => {
+      setCurrentVideoReady(true);
+      setPlayingIdx(idx);
+      console.log(`[HeroCarousel] Trailer confirmed playing for slide index: ${idx}`);
+    },
+    []
+  );
 
   const slide = slides[current];
   const slideDuration = slide ? getSlideDuration(slide) : BASE_AUTO_PLAY_MS;
-
-  // Autoplay timer
   const isTimerActive = isPlaying && !isHovered && (!slide?.trailerKey || currentVideoReady);
+  // True when the current slide's trailer is confirmed playing
+  const isTrailerPlaying = playingIdx === current;
 
   useEffect(() => {
     if (!isTimerActive || slides.length <= 1 || isDragging.current) return;
-
     const timer = setTimeout(next, slideDuration);
     return () => clearTimeout(timer);
   }, [isTimerActive, current, slideDuration, next, slides.length]);
 
-  // Swipe gesture handlings
   const handlePointerDown = (e) => {
     isDragging.current = true;
     dragStartX.current = e.clientX;
@@ -273,17 +265,14 @@ export default function HeroCarousel() {
           }
         `}</style>
 
-        {/* Slide layers */}
-        <div className="absolute inset-0 z-0 hero-media-layer">
+        {/* ── LAYER 1: Slide backdrops (poster images + scrims) ── z-0 */}
+        <div className="absolute inset-0 z-0">
           {slides.map((s, idx) => {
             const isCurrent = idx === current;
             const isOutgoing = idx === prevCurrent && !isCurrent;
             const isPreload = idx === (current + 1) % slides.length && !isCurrent;
-
             if (!isCurrent && !isOutgoing && !isPreload) return null;
-
             const zIndex = isCurrent ? 10 : isOutgoing ? 5 : 0;
-
             return (
               <div
                 key={s.id}
@@ -302,25 +291,26 @@ export default function HeroCarousel() {
                   isOutgoing={isOutgoing}
                   isPreload={isPreload}
                   dragOffset={dragOffset}
+                  // Pass trailer-playing state so the poster scrim can fade out
+                  isTrailerPlaying={isCurrent && isTrailerPlaying}
                 />
               </div>
             );
           })}
         </div>
 
-        {/* Centralized persistent trailer preloader cache pool */}
-        <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+        {/* ── LAYER 2: Trailer iframe pool ── z-20 (above poster z-10, below content z-30) */}
+        <div className="absolute inset-0 z-20 overflow-hidden pointer-events-none">
           {slides.map((s, idx) => {
             const isCurrent = idx === current;
             const isPreload = idx === (current + 1) % slides.length;
             const shouldMount =
               s.trailerKey && (loadedTrailerKeys.has(s.trailerKey) || isCurrent || isPreload);
-
             if (!shouldMount) return null;
-
             return (
               <HeroTrailer
                 key={s.id}
+                slideIdx={idx}
                 videoKey={s.trailerKey}
                 isCurrent={isCurrent}
                 isMuted={isMuted}
@@ -331,7 +321,7 @@ export default function HeroCarousel() {
           })}
         </div>
 
-        {/* Control and timeline overlay */}
+        {/* ── LAYER 3: Controls & timeline ── z-30 */}
         <HeroControls
           slides={slides}
           current={current}
@@ -346,6 +336,7 @@ export default function HeroCarousel() {
           onToggleMute={() => setIsMuted((m) => !m)}
         />
 
+        {/* ── LAYER 4: Edge vignette (decorative, no z, natural stacking) */}
         <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
       </section>
     </Profiler>

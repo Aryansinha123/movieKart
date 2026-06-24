@@ -10,13 +10,16 @@ export default memo(function HeroSlide({
   isCurrent,
   isOutgoing,
   isPreload,
-  dragOffset
+  dragOffset,
+  isTrailerPlaying,
 }) {
   const renderCount = useRef(0);
   renderCount.current += 1;
-  console.log(`[Profiler] <HeroSlide> render count for slide ${slide.id}: ${renderCount.current}`);
+  console.log(
+    `[HeroSlide] render #${renderCount.current} | id=${slide.id} | isCurrent=${isCurrent} | isTrailerPlaying=${isTrailerPlaying}`
+  );
 
-  const slideOpacity = isCurrent ? 1 : (isOutgoing ? 0 : 0);
+  const slideOpacity = isCurrent ? 1 : 0;
   const watchHref = getMovieUrl(slide.id, slide.title);
 
   return (
@@ -30,9 +33,13 @@ export default memo(function HeroSlide({
       transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1.0] }}
       className="absolute inset-0"
     >
-      <Link 
-        href={watchHref} 
-        onClick={() => console.log(`[Client-HeroCarousel] Clicked Slide Background Movie ID: ${slide.id}, Title: "${slide.title}"`)} 
+      <Link
+        href={watchHref}
+        onClick={() =>
+          console.log(
+            `[HeroCarousel] Clicked slide id=${slide.id} title="${slide.title}"`
+          )
+        }
         className="absolute inset-0 block cursor-pointer z-0"
       >
         <HeroBackground
@@ -40,6 +47,8 @@ export default memo(function HeroSlide({
           isCurrent={isCurrent}
           isPreload={isPreload}
           dragOffset={dragOffset}
+          // When trailer is playing, fade poster scrims so trailer shows through
+          isTrailerPlaying={isTrailerPlaying}
         />
       </Link>
 

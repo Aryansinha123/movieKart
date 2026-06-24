@@ -96,9 +96,9 @@ body {
 .hero-trailer-wrap {
   position: absolute;
   inset: 0;
-  z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  /* z-index intentionally NOT set here — controlled by parent container in HeroCarousel */
 }
 
 .hero-trailer-iframe {
@@ -112,8 +112,9 @@ body {
   pointer-events: none;
 }
 
+/* hero-media-layer: NO isolation — was creating a stacking context that buried the trailer */
 .hero-media-layer {
-  isolation: isolate;
+  /* isolation: isolate removed intentionally */
 }
 
 .hero-content-layer {

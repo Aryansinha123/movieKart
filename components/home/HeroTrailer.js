@@ -4,16 +4,19 @@ import { getYoutubeEmbedUrl } from "@/lib/trailers";
 /**
  * HeroTrailer — persistent iframe player for the hero carousel.
  *
- * Design decisions:
- * - Each HeroTrailer is mounted ONCE and toggled visible/invisible by
- *   `isCurrent`. This prevents black flashes from iframe teardown/recreation.
- * - YouTube's postMessage API (`playVideo`, `pauseVideo`, `mute`) is used
- *   because the IFrame Player API isn't available cross-origin in this setup.
- * - `sendCommandWithRetry` retries the initial play command every 400ms for
- *   up to 10 seconds to handle the case where the iframe hasn't buffered yet
- *   when `isCurrent` first becomes true.
+ * z-index note: This component renders inside a z-20 container in HeroCarousel.
+ * The CSS class hero-trailer-wrap previously set z-index:0 via globals.css — that
+ * class is no longer applied here to avoid z-index fights. Layout is handled by
+ * the parent container (absolute inset-0 z-20 in HeroCarousel).
+ *
+ * Netflix-style flow:
+ *   1. iframe loads silently in background (opacity: 0)
+ *   2. YouTube postMessage playerState=1 fires → videoPlaying = true
+ *   3. Opacity transitions to 1 over 800ms
+ *   4. HeroSlide poster scrims fade out (via isTrailerPlaying prop)
  */
 export default memo(function HeroTrailer({
+  slideIdx,
   videoKey,
   isCurrent,
   isMuted,
@@ -26,21 +29,23 @@ export default memo(function HeroTrailer({
   const loadStart = useRef(null);
   const isLoaded = useRef(false);
   const retryRef = useRef(null);
+  // Track whether videoPlaying is true in a ref for the retry callback
+  const videoPlayingRef = useRef(false);
 
   const renderCount = useRef(0);
   renderCount.current += 1;
   console.log(
-    `[Profiler] <HeroTrailer> render count for ${videoKey}: ${renderCount.current}`
+    `[HeroTrailer] render #${renderCount.current} | key=${videoKey} | isCurrent=${isCurrent} | videoPlaying=${videoPlaying}`
   );
 
   // Set embed URL once on mount (or if videoKey changes)
   useEffect(() => {
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, true));
     loadStart.current = performance.now();
     // Reset state when video key changes
     setVideoPlaying(false);
+    videoPlayingRef.current = false;
     isLoaded.current = false;
   }, [videoKey]);
 
@@ -59,16 +64,15 @@ export default memo(function HeroTrailer({
   };
 
   /**
-   * Retry sending `playVideo` every 400ms until the player acks it
-   * (detected via the window message listener setting `videoPlaying`).
-   * Capped at 10 s to avoid endless loops on blocked autoplay.
+   * Retry playVideo every 400ms until YouTube confirms state=1.
+   * Capped at 10 s (25 attempts) to avoid infinite loops on blocked autoplay.
    */
   const sendCommandWithRetry = (func, args = []) => {
     clearInterval(retryRef.current);
     let attempts = 0;
-    const MAX_ATTEMPTS = 25; // 25 × 400ms = 10 s cap
+    const MAX_ATTEMPTS = 25; // 25 × 400ms = 10s cap
     retryRef.current = setInterval(() => {
-      if (videoPlaying || attempts >= MAX_ATTEMPTS) {
+      if (videoPlayingRef.current || attempts >= MAX_ATTEMPTS) {
         clearInterval(retryRef.current);
         return;
       }
@@ -79,12 +83,11 @@ export default memo(function HeroTrailer({
 
   const effectiveMuteState = isMuted || !hasInteracted;
 
-  // Sync play/pause state & handle retry on slide activation
+  // Sync play/pause on slide activation — start retry on becoming current
   useEffect(() => {
     if (!embedSrc) return;
 
     if (isCurrent) {
-      // Start retrying playVideo until the player confirms playback
       sendCommandWithRetry("playVideo");
       sendCommand(effectiveMuteState ? "mute" : "unMute");
       sendCommand("setVolume", [100]);
@@ -93,6 +96,7 @@ export default memo(function HeroTrailer({
       sendCommand("pauseVideo");
       sendCommand("mute");
       setVideoPlaying(false);
+      videoPlayingRef.current = false;
     }
 
     return () => clearInterval(retryRef.current);
@@ -103,9 +107,7 @@ export default memo(function HeroTrailer({
   useEffect(() => {
     if (!embedSrc || !isCurrent) return;
     sendCommand(effectiveMuteState ? "mute" : "unMute");
-    if (!effectiveMuteState) {
-      sendCommand("setVolume", [100]);
-    }
+    if (!effectiveMuteState) sendCommand("setVolume", [100]);
   }, [effectiveMuteState, isCurrent, embedSrc]); // eslint-disable-line
 
   // Listen for YouTube player state messages
@@ -113,13 +115,10 @@ export default memo(function HeroTrailer({
     if (!embedSrc) return;
 
     const handleMessage = (event) => {
-      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) {
-        return;
-      }
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
 
       try {
-        const data =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
         // playerState === 1 means PLAYING
         const isPlayingState =
@@ -127,21 +126,21 @@ export default memo(function HeroTrailer({
           (data.event === "initialDelivery" && data.info?.playerState === 1) ||
           (data.event === "onStateChange" && data.info === 1);
 
-        if (isPlayingState) {
-          // Stop the retry loop once confirmed playing
+        if (isPlayingState && !videoPlayingRef.current) {
           clearInterval(retryRef.current);
+          videoPlayingRef.current = true;
+          setVideoPlaying(true);
 
           if (!isLoaded.current) {
             isLoaded.current = true;
             if (loadStart.current) {
               const loadTime = performance.now() - loadStart.current;
-              console.log(
-                `[Profiler] Trailer ${videoKey} load time: ${loadTime.toFixed(2)}ms`
-              );
+              console.log(`[HeroTrailer] Trailer ${videoKey} confirmed playing. Load time: ${loadTime.toFixed(0)}ms`);
             }
           }
-          setVideoPlaying(true);
-          onPlaying?.();
+
+          // Notify parent with the slide index so it knows which slide is playing
+          onPlaying?.(slideIdx);
         }
       } catch {
         // Ignore JSON parse errors
@@ -150,7 +149,7 @@ export default memo(function HeroTrailer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [embedSrc, onPlaying, videoKey]);
+  }, [embedSrc, onPlaying, videoKey, slideIdx]);
 
   // Cleanup retry interval on unmount
   useEffect(() => {
@@ -160,11 +159,11 @@ export default memo(function HeroTrailer({
   if (!embedSrc) return null;
 
   return (
+    // No hero-trailer-wrap class — that class sets z-index:0 which fights the parent z-20
     <div
-      className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out hero-trailer-wrap"
+      className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out overflow-hidden pointer-events-none"
       style={{
         opacity: isCurrent && videoPlaying ? 1 : 0,
-        pointerEvents: "none",
       }}
     >
       <iframe
