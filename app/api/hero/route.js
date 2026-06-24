@@ -21,10 +21,11 @@ export async function GET(req) {
 
     return NextResponse.json({ success: true, slides });
   } catch (error) {
-    console.error("Hero API error:", error);
+    console.error("Hero API error:", error?.message || error);
+    // Return empty slides rather than crashing the carousel entirely
     return NextResponse.json(
       { success: false, message: error?.message || "Failed to load hero slides.", slides: [] },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }
