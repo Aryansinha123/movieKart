@@ -1,246 +1,19 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useCallback, useEffect, useRef, useState, memo } from "react";
-import Image from "next/image";
+import { useCallback, useEffect, useRef, useState, Profiler } from "react";
 import Link from "next/link";
-import {
-  motion,
-  useMotionValue,
-  useTransform,
-  useSpring,
-} from "framer-motion";
-import {
-  Play,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Pause,
-  Star,
-  Radio,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
-import WatchListButton from "@/components/movie/WatchListButton";
 import { getMovieUrl } from "@/utils/slugify";
-import { getYoutubeEmbedUrl } from "@/lib/trailers";
+import HeroSlide from "./HeroSlide";
+import HeroTrailer from "./HeroTrailer";
+import HeroControls from "./HeroControls";
 
 const BASE_AUTO_PLAY_MS = 12000;
 const SWIPE_THRESHOLD = 60;
 
-const LANG_LABELS = {
-  hi: "Hindi",
-  en: "English",
-  te: "Telugu",
-  ta: "Tamil",
-  ml: "Malayalam",
-  kn: "Kannada",
-  ko: "Korean",
-  ja: "Japanese",
-};
-
 function getSlideDuration(slide) {
   return 12000;
 }
-
-function HeroTrailerPlayer({ videoKey, isActive, onPlaying, isMuted, hasInteracted }) {
-  const [embedSrc, setEmbedSrc] = useState(null);
-  const iframeRef = useRef(null);
-  const isMutedRef = useRef(isMuted);
-  const hasInteractedRef = useRef(hasInteracted);
-
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  useEffect(() => {
-    hasInteractedRef.current = hasInteracted;
-  }, [hasInteracted]);
-
-  useEffect(() => {
-    if (!isActive || !videoKey) {
-      setEmbedSrc(null);
-      return;
-    }
-
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    // Note: We always start the embed with mute=1 in the URL so that the browser does NOT block autoplay.
-    // We then dynamically unmute it as soon as the video is playing and user has interacted.
-    setEmbedSrc(getYoutubeEmbedUrl(videoKey, origin, true));
-  }, [isActive, videoKey]);
-
-  const effectiveMuteState = isMuted || !hasInteracted;
-
-  // Send volume/mute commands whenever state changes
-  useEffect(() => {
-    if (!iframeRef.current || !iframeRef.current.contentWindow || !embedSrc) return;
-
-    const command = effectiveMuteState ? "mute" : "unMute";
-    if (!effectiveMuteState) {
-      iframeRef.current.contentWindow.postMessage(
-        JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
-        "*"
-      );
-    }
-    iframeRef.current.contentWindow.postMessage(
-      JSON.stringify({ event: "command", func: command, args: [] }),
-      "*"
-    );
-  }, [effectiveMuteState, embedSrc]);
-
-  useEffect(() => {
-    if (!embedSrc) return;
-
-    const handleMessage = (event) => {
-      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) {
-        return;
-      }
-
-      try {
-        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        
-        // YouTube API playing states:
-        // - infoDelivery/initialDelivery with playerState = 1 (playing)
-        // - onStateChange with info = 1 (playing)
-        const isPlayingState = 
-          (data.event === "infoDelivery" && data.info?.playerState === 1) ||
-          (data.event === "initialDelivery" && data.info?.playerState === 1) ||
-          (data.event === "onStateChange" && data.info === 1);
-
-        if (isPlayingState) {
-          onPlaying?.();
-
-          // Sync volume and mute state as soon as the player is active and playing
-          const command = isMutedRef.current || !hasInteractedRef.current ? "mute" : "unMute";
-          if (command === "unMute") {
-            iframeRef.current.contentWindow.postMessage(
-              JSON.stringify({ event: "command", func: "setVolume", args: [100] }),
-              "*"
-            );
-          }
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify({ event: "command", func: command, args: [] }),
-            "*"
-          );
-        }
-      } catch (e) {
-        // Ignore parser or irrelevant messages
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [embedSrc, onPlaying]);
-
-  if (!embedSrc) return null;
-
-  return (
-    <div className="hero-trailer-wrap">
-      <iframe
-        ref={iframeRef}
-        src={embedSrc}
-        title="Official trailer"
-        className="hero-trailer-iframe"
-        allow="autoplay; encrypted-media; picture-in-picture"
-        referrerPolicy="strict-origin-when-cross-origin"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
-
-const SlideBackground = memo(function SlideBackground({ slide, parallaxX, parallaxY, dragOffset, isCurrent, isOutgoing, isPreload, isMuted, hasInteracted, onVideoPlaying }) {
-  const [videoPlaying, setVideoPlaying] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-
-  useEffect(() => {
-    if (!isCurrent) {
-      setShowVideo(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setShowVideo(true);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [isCurrent]);
-
-  useEffect(() => {
-    if (!isCurrent) {
-      setVideoPlaying(false);
-    }
-  }, [isCurrent]);
-
-  const shouldLoadTrailer = slide.trailerKey && isCurrent;
-  const isVideoVisible = shouldLoadTrailer && showVideo && videoPlaying;
-  const slideOpacity = isCurrent ? 1 : (isOutgoing ? 1 : 0);
-
-  return (
-    <motion.div
-      animate={{ opacity: slideOpacity }}
-      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1.0] }}
-      className="absolute inset-0 hero-media-layer"
-      style={{ pointerEvents: isCurrent ? "auto" : "none" }}
-    >
-      {/* Layer 1: Backdrop banner — parallax only on image, never on video */}
-      <motion.div
-        className="absolute inset-0 z-0"
-        style={{ x: dragOffset * 0.12 }}
-        animate={{ opacity: isVideoVisible ? 0 : 1 }}
-        transition={{ duration: 0.8, ease: "easeInOut" }}
-      >
-        <motion.div className="absolute inset-[-4%]" style={{ x: parallaxX, y: parallaxY }}>
-          {slide.backdrop && (
-            <Image
-              src={slide.backdrop}
-              alt=""
-              fill
-              priority
-              className="object-cover object-center"
-              sizes="100vw"
-            />
-          )}
-        </motion.div>
-      </motion.div>
-
-      {/* Layer 2: Trailer — separate layer, no CSS transform on parent */}
-      {shouldLoadTrailer && (
-        <motion.div
-          className="absolute inset-0 z-[1] overflow-hidden"
-          animate={{ opacity: isVideoVisible ? 1 : 0 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ pointerEvents: "none" }}
-        >
-          {showVideo && (
-            <HeroTrailerPlayer
-              videoKey={slide.trailerKey}
-              isActive={shouldLoadTrailer && showVideo}
-              onPlaying={() => {
-                setVideoPlaying(true);
-                onVideoPlaying?.();
-              }}
-              isMuted={isMuted}
-              hasInteracted={hasInteracted}
-            />
-          )}
-        </motion.div>
-      )}
-
-      {/* Layer 3: Cinematic scrims — always above media, below text */}
-      <div className="absolute inset-0 z-[5] pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/20 to-black/50" />
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background: `radial-gradient(ellipse 70% 55% at 18% 55%, ${slide.accent}33, transparent 70%)`,
-          }}
-        />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDIiLz4KPC9zdmc+')] opacity-50" />
-      </div>
-    </motion.div>
-  );
-});
 
 async function enrichSlidesWithTrailers(slides) {
   return Promise.all(
@@ -260,168 +33,6 @@ async function enrichSlidesWithTrailers(slides) {
   );
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.05,
-    },
-  },
-  exit: {
-    opacity: 0,
-    transition: {
-      staggerChildren: 0.04,
-      staggerDirection: -1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    transition: {
-      duration: 0.3,
-      ease: "easeIn",
-    },
-  },
-};
-
-const SlideContent = memo(function SlideContent({ slide, isActive }) {
-  const rating = slide.vote_average ? slide.vote_average.toFixed(1) : null;
-  const watchHref = getMovieUrl(slide.id, slide.title);
-
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate={isActive ? "visible" : "hidden"}
-      exit="exit"
-      className="relative z-20 max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]"
-    >
-      <motion.div
-        variants={itemVariants}
-        style={{
-          background: `linear-gradient(135deg, ${slide.accent}22, ${slide.accentSecondary}18)`,
-          border: `1px solid ${slide.accent}44`,
-          color: slide.accentSecondary || slide.accent,
-          willChange: "transform, opacity",
-          animation: slide.source === "preferred" ? "language-glow-pulse 2s infinite ease-in-out" : "none",
-        }}
-        className="inline-flex items-center gap-2 mb-5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-[0.2em] backdrop-blur-md"
-      >
-        {slide.source === "preferred" ? (
-          <span className="relative flex h-2 w-2 mr-1">
-            <span
-              className="animate-pulse absolute inline-flex h-full w-full rounded-full opacity-75"
-              style={{ backgroundColor: slide.accent }}
-            />
-            <span
-              className="relative inline-flex rounded-full h-2 w-2"
-              style={{ backgroundColor: slide.accent }}
-            />
-          </span>
-        ) : slide.badge === "Live Now" || slide.badge === "Now Playing in Theaters" ? (
-          <span className="relative flex h-2 w-2">
-            <span
-              className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-              style={{ backgroundColor: slide.accent }}
-            />
-            <span
-              className="relative inline-flex rounded-full h-2 w-2"
-              style={{ backgroundColor: slide.accent }}
-            />
-          </span>
-        ) : (
-          <Radio size={12} />
-        )}
-        {slide.badge}
-      </motion.div>
-
-      <motion.h1
-        variants={itemVariants}
-        style={{ willChange: "transform, opacity" }}
-        className="hero-title text-[clamp(2.25rem,5.5vw,4.25rem)] font-bold leading-[1.05] tracking-tight text-white mb-4 drop-shadow-2xl"
-      >
-        {slide.title}
-      </motion.h1>
-
-      <motion.div
-        variants={itemVariants}
-        style={{ willChange: "transform, opacity" }}
-        className="flex flex-wrap items-center gap-3 mb-5"
-      >
-        {rating && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-sm font-semibold">
-            <Star size={14} className="fill-amber-400 text-amber-400" />
-            {rating}
-            <span className="text-amber-400/70 font-normal text-xs">IMDb</span>
-          </span>
-        )}
-        {slide.original_language && (
-          <span className="px-3 py-1 rounded-lg text-xs font-semibold text-white bg-red-500/15 border border-red-500/30 backdrop-blur-sm uppercase tracking-wide">
-            {LANG_LABELS[slide.original_language] || slide.original_language.toUpperCase()}
-          </span>
-        )}
-        {slide.genres?.map((genre) => (
-          <span
-            key={genre}
-            className="px-3 py-1 rounded-lg text-xs font-medium text-zinc-300 bg-white/5 border border-white/10 backdrop-blur-sm"
-          >
-            {genre}
-          </span>
-        ))}
-      </motion.div>
-
-      <motion.p
-        variants={itemVariants}
-        style={{ willChange: "transform, opacity" }}
-        className="text-zinc-300/90 text-base md:text-lg leading-relaxed max-w-2xl mb-8 line-clamp-3 font-light"
-      >
-        {slide.overview}
-      </motion.p>
-
-      <motion.div
-        variants={itemVariants}
-        style={{ willChange: "transform, opacity" }}
-        className="flex flex-wrap gap-3"
-      >
-        <Link href={watchHref} onClick={() => console.log(`[Client-HeroCarousel] Clicked Watch Now Button Movie ID: ${slide.id}, Title: "${slide.title}"`)}>
-          <button
-            className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg cursor-pointer"
-            style={{
-              background: `linear-gradient(135deg, ${slide.accent}, ${slide.accentSecondary})`,
-              boxShadow: `0 8px 32px ${slide.accent}44`,
-            }}
-          >
-            <Play size={18} className="fill-white group-hover:scale-110 transition-transform" />
-            Watch Now
-          </button>
-        </Link>
-
-        <WatchListButton
-          movieId={slide.id}
-          className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white bg-white/8 hover:bg-white/14 border border-white/15 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-        >
-          <Plus size={18} />
-          Add to Watchlist
-        </WatchListButton>
-      </motion.div>
-    </motion.div>
-  );
-});
-
 export default function HeroCarousel() {
   const [slides, setSlides] = useState([]);
   const [current, setCurrent] = useState(0);
@@ -433,13 +44,108 @@ export default function HeroCarousel() {
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [currentVideoReady, setCurrentVideoReady] = useState(false);
+  const [loadedTrailerKeys, setLoadedTrailerKeys] = useState(new Set());
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Reset video ready status when transitioning to a new slide
+  const containerRef = useRef(null);
+  const dragStartX = useRef(0);
+  const isDragging = useRef(false);
+
+  const rafRef = useRef(null);
+  const currentX = useRef(0);
+  const currentY = useRef(0);
+  const targetX = useRef(0);
+  const targetY = useRef(0);
+
+  // Profile commit logs
+  const onRenderCallback = (id, phase, actualDuration) => {
+    console.log(`[Profiler] ${id} commitment [${phase}] actual duration: ${actualDuration.toFixed(2)}ms`);
+  };
+
+  // Detect mobile & touch devices to disable mouse move parallax
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        window.matchMedia("(max-width: 768px)").matches || 
+        ('ontouchstart' in window) || 
+        (navigator.maxTouchPoints > 0)
+      );
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // RequestAnimationFrame Parallax loop
+  const updateParallax = () => {
+    currentX.current += (targetX.current - currentX.current) * 0.08; // smooth LERP
+    currentY.current += (targetY.current - currentY.current) * 0.08;
+
+    if (containerRef.current) {
+      containerRef.current.style.setProperty("--parallax-x", `${currentX.current.toFixed(2)}px`);
+      containerRef.current.style.setProperty("--parallax-y", `${currentY.current.toFixed(2)}px`);
+    }
+
+    if (Math.abs(targetX.current - currentX.current) > 0.01 || Math.abs(targetY.current - currentY.current) > 0.01) {
+      rafRef.current = requestAnimationFrame(updateParallax);
+    } else {
+      rafRef.current = null;
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isMobile || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pctX = ((e.clientX - rect.left) / rect.width) - 0.5;
+    const pctY = ((e.clientY - rect.top) / rect.height) - 0.5;
+
+    // Reduced range (8px - 12px) for optimized visual stability
+    targetX.current = pctX * 20; // [-10px, 10px]
+    targetY.current = pctY * 16; // [-8px, 8px]
+
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(updateParallax);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    targetX.current = 0;
+    targetY.current = 0;
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(updateParallax);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
+
+  // Cache preloaded trailer keys in a Set
+  useEffect(() => {
+    if (slides.length === 0) return;
+    const currentKey = slides[current]?.trailerKey;
+    const nextIdx = (current + 1) % slides.length;
+    const nextKey = slides[nextIdx]?.trailerKey;
+
+    setLoadedTrailerKeys((prev) => {
+      const nextKeys = new Set(prev);
+      if (currentKey) nextKeys.add(currentKey);
+      if (nextKey) nextKeys.add(nextKey);
+      return nextKeys;
+    });
+  }, [current, slides]);
+
+  // Reset video ready state on slide change
   useEffect(() => {
     setCurrentVideoReady(false);
   }, [current]);
 
-  // Delayed state updater for prevCurrent to handle slide fade-out transitions (800ms Snappy Transition)
+  // Handle slide fade-out delay (800ms Snappy Transition)
   useEffect(() => {
     const timer = setTimeout(() => {
       setPrevCurrent(current);
@@ -447,18 +153,7 @@ export default function HeroCarousel() {
     return () => clearTimeout(timer);
   }, [current]);
 
-  const containerRef = useRef(null);
-  const dragStartX = useRef(0);
-  const isDragging = useRef(false);
-
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { stiffness: 60, damping: 20 });
-  const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
-  const parallaxX = useTransform(springX, [-0.5, 0.5], [-24, 24]);
-  const parallaxY = useTransform(springY, [-0.5, 0.5], [-16, 16]);
-
-  // Listen to document interaction globally
+  // Global user interaction observer
   useEffect(() => {
     const handleInteraction = () => {
       setHasInteracted(true);
@@ -479,11 +174,11 @@ export default function HeroCarousel() {
     };
   }, []);
 
+  // Ingest slides and load trailers
   useEffect(() => {
     async function loadSlides() {
       try {
-        const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const headers = {};
         if (token && token !== "null" && token !== "undefined") {
           headers.Authorization = `Bearer ${token}`;
@@ -500,6 +195,7 @@ export default function HeroCarousel() {
           });
           setSlides(uniqueSlides);
           setLoading(false);
+          
           const withTrailers = await enrichSlidesWithTrailers(uniqueSlides);
           const seen2 = new Set();
           const finalUnique = withTrailers.filter((s) => {
@@ -510,7 +206,8 @@ export default function HeroCarousel() {
           setSlides(finalUnique);
           return;
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to load slides:", err.message);
         setSlides([]);
       } finally {
         setLoading(false);
@@ -530,7 +227,7 @@ export default function HeroCarousel() {
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
 
-  // Keyboard arrow key navigation
+  // Arrow key navigation support
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "ArrowLeft") {
@@ -543,7 +240,7 @@ export default function HeroCarousel() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [next, prev]);
 
-  // Stable callback for video ready notification
+  // Stable playing callback
   const handleVideoPlaying = useCallback(() => {
     setCurrentVideoReady(true);
   }, []);
@@ -551,7 +248,7 @@ export default function HeroCarousel() {
   const slide = slides[current];
   const slideDuration = slide ? getSlideDuration(slide) : BASE_AUTO_PLAY_MS;
 
-  // Autoplay countdown timer starts only when active slide is playing and not hovered
+  // Autoplay timer
   const isTimerActive = isPlaying && !isHovered && (!slide?.trailerKey || currentVideoReady);
 
   useEffect(() => {
@@ -561,13 +258,7 @@ export default function HeroCarousel() {
     return () => clearTimeout(timer);
   }, [isTimerActive, current, slideDuration, next, slides.length]);
 
-  const handleMouseMove = (e) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
-    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
+  // Swipe gesture handlings
   const handlePointerDown = (e) => {
     isDragging.current = true;
     dragStartX.current = e.clientX;
@@ -602,154 +293,110 @@ export default function HeroCarousel() {
   if (slides.length === 0) return null;
 
   return (
-    <section
-      ref={containerRef}
-      className="relative w-full h-[70vh] md:h-[88vh] overflow-hidden bg-[#050505] select-none touch-pan-y"
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        mouseX.set(0);
-        mouseY.set(0);
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      aria-label="Featured content carousel"
-    >
-      <style>{`
-        @keyframes progress-bar {
-          from { transform: scaleX(0); }
-          to { transform: scaleX(1); }
-        }
-        @keyframes language-glow-pulse {
-          0%, 100% {
-            box-shadow: 0 0 4px var(--slide-accent-pulse), inset 0 0 2px var(--slide-accent-pulse);
-            border-color: var(--slide-accent-border);
+    <Profiler id="HeroCarousel" onRender={onRenderCallback}>
+      <section
+        ref={containerRef}
+        className="relative w-full h-[70vh] md:h-[88vh] overflow-hidden bg-[#050505] select-none touch-pan-y"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={handleMouseLeave}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        aria-label="Featured content carousel"
+      >
+        <style>{`
+          @keyframes progress-bar {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
           }
-          50% {
-            box-shadow: 0 0 12px var(--slide-accent-glow), inset 0 0 6px var(--slide-accent-glow);
-            border-color: var(--slide-accent-glow-border);
+          @keyframes language-glow-pulse {
+            0%, 100% {
+              box-shadow: 0 0 4px var(--slide-accent-pulse), inset 0 0 2px var(--slide-accent-pulse);
+              border-color: var(--slide-accent-border);
+            }
+            50% {
+              box-shadow: 0 0 12px var(--slide-accent-glow), inset 0 0 6px var(--slide-accent-glow);
+              border-color: var(--slide-accent-glow-border);
+            }
           }
-        }
-      `}</style>
+        `}</style>
 
-      {/* Stacked slide backgrounds with custom preloading and crossfading */}
-      <div className="absolute inset-0 z-0 hero-media-layer">
-        {slides.map((s, idx) => {
-          const isCurrent = idx === current;
-          const isOutgoing = idx === prevCurrent && !isCurrent;
-          const isPreload = idx === (current + 1) % slides.length && !isCurrent;
+        {/* Slide layers */}
+        <div className="absolute inset-0 z-0 hero-media-layer">
+          {slides.map((s, idx) => {
+            const isCurrent = idx === current;
+            const isOutgoing = idx === prevCurrent && !isCurrent;
+            const isPreload = idx === (current + 1) % slides.length && !isCurrent;
 
-          if (!isCurrent && !isOutgoing && !isPreload) return null;
+            if (!isCurrent && !isOutgoing && !isPreload) return null;
 
-          const zIndex = isCurrent ? 10 : (isOutgoing ? 5 : 0);
-          const watchHref = getMovieUrl(s.id, s.title);
+            const zIndex = isCurrent ? 10 : (isOutgoing ? 5 : 0);
 
-          return (
-            <div
-              key={s.id}
-              style={{
-                zIndex,
-                "--slide-accent-pulse": `${s.accent}33`,
-                "--slide-accent-border": `${s.accent}44`,
-                "--slide-accent-glow": `${s.accent}77`,
-                "--slide-accent-glow-border": `${s.accent}aa`,
-              }}
-              className="absolute inset-0"
-            >
-              <Link href={watchHref} onClick={() => console.log(`[Client-HeroCarousel] Clicked Slide Background Movie ID: ${s.id}, Title: "${s.title}"`)} className="absolute inset-0 block cursor-pointer z-0">
-                <SlideBackground
+            return (
+              <div
+                key={s.id}
+                style={{
+                  zIndex,
+                  "--slide-accent-pulse": `${s.accent}33`,
+                  "--slide-accent-border": `${s.accent}44`,
+                  "--slide-accent-glow": `${s.accent}77`,
+                  "--slide-accent-glow-border": `${s.accent}aa`,
+                }}
+                className="absolute inset-0"
+              >
+                <HeroSlide
                   slide={s}
-                  parallaxX={parallaxX}
-                  parallaxY={parallaxY}
-                  dragOffset={dragOffset}
                   isCurrent={isCurrent}
                   isOutgoing={isOutgoing}
                   isPreload={isPreload}
-                  isMuted={isMuted}
-                  hasInteracted={hasInteracted}
-                  onVideoPlaying={handleVideoPlaying}
+                  dragOffset={dragOffset}
                 />
-              </Link>
-
-              <div className="hero-content-layer h-full max-w-[1600px] mx-auto px-6 md:px-10 flex items-end pb-28 md:pb-32 pointer-events-none">
-                <div className="pointer-events-auto">
-                  <SlideContent slide={s} isActive={isCurrent} />
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="absolute bottom-24 md:bottom-28 left-6 md:left-10 z-30 flex items-center gap-2">
-        {slides.map((s, i) => (
-          <button
-            key={s.id}
-            onClick={() => goTo(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className="group relative h-1 rounded-full overflow-hidden transition-all duration-500 cursor-pointer"
-            style={{ width: i === current ? 40 : 16 }}
-          >
-            <span className="absolute inset-0 bg-white/20 rounded-full" />
-            <span
-              className="absolute inset-y-0 left-0 right-0 rounded-full origin-left"
-              style={{
-                background: `linear-gradient(90deg, ${s.accent}, ${s.accentSecondary})`,
-                transform: i === current ? undefined : "scaleX(0)",
-                animation: i === current && isTimerActive ? `progress-bar ${slideDuration}ms linear forwards` : "none",
-                animationPlayState: isTimerActive ? "running" : "paused",
-              }}
-            />
-          </button>
-        ))}
-      </div>
-
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30">
-        <div className="glass-panel flex items-center gap-1 px-2 py-2 rounded-2xl">
-          <button
-            onClick={prev}
-            aria-label="Previous slide"
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          >
-            <ChevronLeft size={20} />
-          </button>
-
-          <button
-            onClick={() => setIsPlaying((p) => !p)}
-            aria-label={isPlaying ? "Pause autoplay" : "Resume autoplay"}
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          >
-            {isPlaying ? <Pause size={18} /> : <Play size={18} className="fill-current" />}
-          </button>
-
-          <span className="px-3 text-xs font-medium text-zinc-400 tabular-nums min-w-[4rem] text-center">
-            {String(current + 1).padStart(2, "0")}
-            <span className="text-zinc-600 mx-1">/</span>
-            {String(slides.length).padStart(2, "0")}
-          </span>
-
-          <button
-            onClick={next}
-            aria-label="Next slide"
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          >
-            <ChevronRight size={20} />
-          </button>
-
-          <button
-            onClick={() => setIsMuted((m) => !m)}
-            aria-label={isMuted ? "Unmute sound" : "Mute sound"}
-            className="p-2.5 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          >
-            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
+            );
+          })}
         </div>
-      </div>
 
-      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
-    </section>
+        {/* Centralized persistent trailer preloader cache pool (above backdrops, below scrimmage cards) */}
+        <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+          {slides.map((s, idx) => {
+            const isCurrent = idx === current;
+            const isPreload = idx === (current + 1) % slides.length;
+            const shouldMount = s.trailerKey && (loadedTrailerKeys.has(s.trailerKey) || isCurrent || isPreload);
+            
+            if (!shouldMount) return null;
+            
+            return (
+              <HeroTrailer
+                key={s.id}
+                videoKey={s.trailerKey}
+                isCurrent={isCurrent}
+                isMuted={isMuted}
+                hasInteracted={hasInteracted}
+                onPlaying={handleVideoPlaying}
+              />
+            );
+          })}
+        </div>
+
+        {/* Control and timeline overlay */}
+        <HeroControls
+          slides={slides}
+          current={current}
+          isPlaying={isPlaying}
+          isMuted={isMuted}
+          isTimerActive={isTimerActive}
+          slideDuration={slideDuration}
+          onGoTo={goTo}
+          onPrev={prev}
+          onNext={next}
+          onTogglePlay={() => setIsPlaying(p => !p)}
+          onToggleMute={() => setIsMuted(m => !m)}
+        />
+
+        <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_120px_rgba(0,0,0,0.6)]" />
+      </section>
+    </Profiler>
   );
 }
