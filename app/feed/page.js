@@ -139,6 +139,7 @@ export default function FeedPage() {
                   {/* Movie preview */}
                   <Link
                     href={getMovieUrl(activity.movieId, movieMap?.[activity.movieId]?.title)}
+                    onClick={() => console.log(`[Client-Feed] Clicked Activity Movie ID: ${activity.movieId}, Title: "${movieMap?.[activity.movieId]?.title || ""}"`)}
                     className="mt-3 block rounded-xl border border-zinc-800 bg-zinc-950/40 hover:bg-zinc-950/60 transition-colors overflow-hidden"
                   >
                     <div className="flex gap-4 p-4">

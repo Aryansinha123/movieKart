@@ -128,7 +128,14 @@ export default function MovieCard({
       }`}
     >
       <div className={contentOpacityClass}>
-        <Link href={movie.media_type === "person" ? getPersonUrl(movie.id, movie.title) : getMovieUrl(movie.id, movie.title)}>
+        <Link 
+          href={movie.media_type === "person" ? getPersonUrl(movie.id, movie.title) : getMovieUrl(movie.id, movie.title)}
+          onClick={() => {
+            if (movie.media_type !== "person") {
+              console.log(`[Client-MovieCard] Clicked Movie ID: ${movie.id}, Title: "${movie.title}"`);
+            }
+          }}
+        >
           <div className="relative">
             {movie.poster_path ? (
               <Image

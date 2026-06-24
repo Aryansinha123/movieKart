@@ -74,6 +74,12 @@ const UserSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       }
     ],
+    recentSearches: [
+      {
+        query: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+      }
+    ],
   },
   {
     // Force schema update

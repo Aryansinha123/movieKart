@@ -96,6 +96,7 @@ import WhereToWatch from "@/components/movie/WhereToWatch";
 import { parseWatchProviders } from "@/lib/ottProviders";
 import { Star, Check, Heart } from "lucide-react";
 import { getPersonUrl, getMovieUrl } from "@/utils/slugify";
+import Recommendations from "@/components/movie/Recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -168,31 +169,6 @@ async function getMovie(idStr) {
   }
 }
 
-async function getMovieIdBySlug(slug) {
-  if (!process.env.TMDB_API_KEY) return null;
-  try {
-    const query = slug.replace(/-/g, " ");
-    const res = await fetchWithRetry(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(query)}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-        accept: "application/json",
-      },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.results && data.results.length > 0) {
-      const match = data.results.find(item => item.media_type === "movie" || item.media_type === "tv");
-      if (match) {
-        return match.media_type === "tv" ? -match.id : match.id;
-      }
-    }
-    return null;
-  } catch (err) {
-    console.error(`Failed to search movie by slug ${slug}:`, err);
-    return null;
-  }
-}
 
 async function getVideos(idStr) {
   if (!process.env.TMDB_API_KEY) return null;
@@ -276,14 +252,22 @@ export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const rawId = resolvedParams?.id;
   let id = null;
-  if (rawId) {
-    if (/^-?\d+/.test(rawId)) {
-      id = parseInt(rawId, 10);
-    } else {
-      id = await getMovieIdBySlug(rawId);
-    }
+  if (rawId && /^-?\d+/.test(rawId)) {
+    id = parseInt(rawId, 10);
   }
+
+  console.log(`[Server-Metadata] Received route parameter rawId: "${rawId}", Parsed Movie ID: ${id}`);
+
   const movie = id ? await getMovie(id) : null;
+
+  if (movie) {
+    console.log(`[Server-Metadata] Fetched Movie ID: ${movie.id}, Title: "${movie.title}"`);
+    if (movie.id !== id) {
+      console.warn(`[Server-Metadata] WARNING: Parsed ID (${id}) does not match fetched ID (${movie.id})!`);
+    }
+  } else {
+    console.log(`[Server-Metadata] No movie found for ID: ${id}`);
+  }
 
   if (!movie) return { title: "Movie not found" };
 
@@ -343,14 +327,23 @@ export default async function MoviePage({ params }) {
   const resolvedParams = await params;
   const rawId = resolvedParams?.id;
   let id = null;
-  if (rawId) {
-    if (/^-?\d+/.test(rawId)) {
-      id = parseInt(rawId, 10);
-    } else {
-      id = await getMovieIdBySlug(rawId);
-    }
+  if (rawId && /^-?\d+/.test(rawId)) {
+    id = parseInt(rawId, 10);
   }
+
+  console.log(`[Server-MoviePage] Received route parameter rawId: "${rawId}", Parsed Movie ID: ${id}`);
+
   const movie = id ? await getMovie(id) : null;
+
+  if (movie) {
+    console.log(`[Server-MoviePage] Fetched Movie ID: ${movie.id}, Title: "${movie.title}"`);
+    if (movie.id !== id) {
+      console.warn(`[Server-MoviePage] WARNING: Parsed ID (${id}) does not match fetched ID (${movie.id})!`);
+    }
+  } else {
+    console.log(`[Server-MoviePage] No movie found for ID: ${id}`);
+  }
+
   const credits = id ? await getCredits(id) : null;
   const watchProvidersRes = id ? await getWatchProviders(id) : null;
   const videosRes = id ? await getVideos(id) : null;
@@ -536,6 +529,42 @@ export default async function MoviePage({ params }) {
 
       <WhereToWatch providers={providers} watchLink={watchLink} variant="mobile" />
 
+      {/* Videos / Trailers */}
+      {Array.isArray(videosRes?.results) && videosRes.results.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 md:px-10 mt-10">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            Videos <span className="text-zinc-500 text-sm font-normal">({videosRes.results.length})</span>
+          </h2>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {videosRes.results
+              .filter(v => v.site === "YouTube")
+              .slice(0, 4)
+              .map((video) => (
+                <div key={video.id} className="space-y-3">
+                  <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={`https://www.youtube.com/embed/${video.key}`}
+                      title={video.name}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    ></iframe>
+                  </div>
+                  <div className="px-2">
+                    <h3 className="font-semibold text-sm truncate">{video.name}</h3>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
+                      {video.type}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
       {/* Cast */}
       {Array.isArray(credits?.cast) && credits.cast.length > 0 ? (
         <section className="max-w-6xl mx-auto px-10 pt-10">
@@ -570,41 +599,8 @@ export default async function MoviePage({ params }) {
         </section>
       ) : null}
 
-      {/* Videos / Trailers */}
-      {Array.isArray(videosRes?.results) && videosRes.results.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 md:px-10 mt-20">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            Videos <span className="text-zinc-500 text-sm font-normal">({videosRes.results.length})</span>
-          </h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {videosRes.results
-              .filter(v => v.site === "YouTube")
-              .slice(0, 4)
-              .map((video) => (
-                <div key={video.id} className="space-y-3">
-                  <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
-                    <iframe
-                      width="100%"
-                      height="100%"
-                      src={`https://www.youtube.com/embed/${video.key}`}
-                      title={video.name}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full"
-                    ></iframe>
-                  </div>
-                  <div className="px-2">
-                    <h3 className="font-semibold text-sm truncate">{video.name}</h3>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">
-                      {video.type}
-                    </p>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </section>
-      )}
+      {/* Recommendations */}
+      <Recommendations movieId={movie.id} />
 
       <ReviewsSection movieId={movie.id} />
     </main>

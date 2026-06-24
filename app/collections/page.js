@@ -254,7 +254,10 @@ export default function CollectionsDiscoverPage() {
                         {col.nextUnwatched && (
                           <Link
                             href={getMovieUrl(col.nextUnwatched, "")}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log(`[Client-Collections] Clicked Continue Movie ID: ${col.nextUnwatched}`);
+                            }}
                             className="shrink-0 px-4 py-2 rounded-xl bg-green-500/15 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/25"
                           >
                             Continue

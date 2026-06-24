@@ -184,6 +184,7 @@ function PersonMovieCard({ movie }) {
   return (
     <Link 
       href={getMovieUrl(movie.id, movie.title)}
+      onClick={() => console.log(`[Client-PersonFilmography] Clicked Movie ID: ${movie.id}, Title: "${movie.title}"`)}
       className="group relative block rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10"
     >
       <div className="aspect-[16/9] relative overflow-hidden">

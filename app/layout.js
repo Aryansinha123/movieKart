@@ -87,6 +87,7 @@ export const metadata = {
 };
 
 import { UserProvider } from "@/components/providers/UserProvider";
+import { RecentSearchesProvider } from "@/components/providers/RecentSearchesProvider";
 
 import Footer from "@/components/Footer";
 
@@ -124,17 +125,20 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-black">
         <JsonLd data={websiteJsonLd} />
         <JsonLd data={organizationJsonLd} />
         <UserProvider>
-          <Navbar />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
-          <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+          <RecentSearchesProvider>
+            <Navbar />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+            <Toaster position="bottom-right" toastOptions={{ style: { background: '#18181b', color: '#fff' } }} />
+          </RecentSearchesProvider>
         </UserProvider>
       </body>
     </html>

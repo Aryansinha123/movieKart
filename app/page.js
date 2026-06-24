@@ -18,6 +18,7 @@ import {
   Clapperboard,
   Clock,
   Wand2,
+  Search,
 } from "lucide-react";
 
 import HeroCarousel from "@/components/home/HeroCarousel";
@@ -638,6 +639,7 @@ function FriendsActivityFeed() {
             {/* Movie preview */}
             <Link
               href={getMovieUrl(activity.movieId, movieMap?.[activity.movieId]?.title)}
+              onClick={() => console.log(`[Client-Home-ActivityFeed] Clicked Movie ID: ${activity.movieId}, Title: "${movieMap?.[activity.movieId]?.title || ""}"`)}
               className="mt-3 block rounded-xl border border-zinc-800/80 bg-zinc-950/40 hover:bg-zinc-900/60 transition-colors overflow-hidden group"
             >
               <div className="flex gap-4 p-4">
@@ -895,6 +897,19 @@ export default function Home() {
                   />
                   <MovieRow movies={data?.recommended} />
                 </div>
+
+                {/* Because You Searched */}
+                {data?.searchBasedRecommendations?.movies?.length > 0 && (
+                  <div>
+                    <SectionHeader
+                      icon={Search}
+                      title={`Because You Searched "${data.searchBasedRecommendations.query}"`}
+                      subtitle="Recommendations based on your recent search query"
+                      gradient="bg-gradient-to-br from-cyan-500 to-blue-500"
+                    />
+                    <MovieRow movies={data.searchBasedRecommendations.movies} />
+                  </div>
+                )}
 
                 <NewReleases />
                 <UpcomingMovies />

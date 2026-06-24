@@ -18,6 +18,7 @@ import {
   getCuratedCollections,
 } from "@/lib/recommendations";
 import { recommendedGenreBoostFromBadges } from "@/lib/achievements";
+import { searchMovies } from "@/lib/tmdb";
 
 /**
  * GET /api/recommendations
@@ -214,6 +215,26 @@ export async function GET(req) {
 
     if (section === "curated" || section === "all") {
       result.curatedCollections = await getCuratedCollections();
+    }
+
+    // Personalized search history recommendations
+    result.searchBasedRecommendations = { query: "", movies: [] };
+    if (user.recentSearches && user.recentSearches.length > 0) {
+      const topQuery = user.recentSearches[0].query;
+      try {
+        const searchData = await searchMovies(topQuery);
+        const results = (searchData?.results || [])
+          .filter(m => m.media_type === "movie" || m.media_type === "tv")
+          .filter(m => !excludeIds.has(m.id))
+          .slice(0, 10);
+        
+        result.searchBasedRecommendations = {
+          query: topQuery,
+          movies: results
+        };
+      } catch (e) {
+        console.error("Failed to fetch search history recommendations", e);
+      }
     }
 
     result.tasteProfile = tasteProfile;

@@ -15,6 +15,7 @@ import {
   Film,
   UserPlus,
   Loader2,
+  Search,
 } from "lucide-react";
 import { getMovieUrl } from "@/utils/slugify";
 
@@ -48,7 +49,7 @@ function MovieThumb({ movie, i }) {
       transition={{ delay: i * 0.04 }}
       className="flex-shrink-0"
     >
-      <Link href={getMovieUrl(movie.id, movie.title)}>
+      <Link href={getMovieUrl(movie.id, movie.title)} onClick={() => console.log(`[Client-PersonalizedDashboard] Clicked Picked For You Movie ID: ${movie.id}, Title: "${movie.title}"`)}>
         <div className="w-[120px] rounded-lg overflow-hidden border border-zinc-800/60 bg-zinc-900/40 hover:border-purple-500/30 transition-colors">
           {movie.poster_path ? (
             <Image
@@ -143,6 +144,23 @@ export default function PersonalizedDashboard() {
         ) : null}
       </section>
 
+      {/* Search history recommendations */}
+      {data.searchBasedRecommendations?.movies?.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={Search}
+            title={`Because you searched “${data.searchBasedRecommendations.query}”`}
+            subtitle="Recommendations based on your recent search interest"
+            gradient="bg-gradient-to-br from-cyan-500 to-blue-500"
+          />
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-700">
+            {data.searchBasedRecommendations.movies.map((m, i) => (
+              <MovieThumb key={m.id} movie={m} i={i} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {(data.moodPicks || []).map((pick) => (
         <section key={`mood-${pick.id}`}>
           <SectionHeader
@@ -193,6 +211,7 @@ export default function PersonalizedDashboard() {
               <Link
                 key={a._id}
                 href={getMovieUrl(a.movieId, a.meta?.movieTitle)}
+                onClick={() => console.log(`[Client-PersonalizedDashboard] Clicked Friend Activity Movie ID: ${a.movieId}, Title: "${a.meta?.movieTitle}"`)}
                 className="flex items-start gap-3 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-4 hover:border-cyan-500/20 transition-colors"
               >
                 <div className="mt-0.5">
@@ -262,6 +281,7 @@ export default function PersonalizedDashboard() {
             <Link
               key={r._id}
               href={getMovieUrl(r.movieId, r.movie?.title)}
+              onClick={() => console.log(`[Client-PersonalizedDashboard] Clicked Community Review Movie ID: ${r.movieId}, Title: "${r.movie?.title}"`)}
               className="flex gap-3 rounded-xl border border-zinc-800/50 bg-zinc-900/40 p-4 hover:border-violet-500/25"
             >
               {r.movie?.poster_path ? (

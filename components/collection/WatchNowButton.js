@@ -82,7 +82,7 @@ export default function WatchNowButton({
   if (!watchHref) return null;
 
   return (
-    <Link href={watchHref}>
+    <Link href={watchHref} onClick={() => console.log(`[Client-WatchNowButton] Clicked Watch Now Movie ID: ${nextUnwatched}, Title: "${nextMovie?.title || ""}"`)}>
       <button
         className={`inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 font-semibold hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-purple-500/20 ${btnClass}`}
       >

@@ -397,7 +397,7 @@ const SlideContent = memo(function SlideContent({ slide, isActive }) {
         style={{ willChange: "transform, opacity" }}
         className="flex flex-wrap gap-3"
       >
-        <Link href={watchHref}>
+        <Link href={watchHref} onClick={() => console.log(`[Client-HeroCarousel] Clicked Watch Now Button Movie ID: ${slide.id}, Title: "${slide.title}"`)}>
           <button
             className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg cursor-pointer"
             style={{
@@ -659,7 +659,7 @@ export default function HeroCarousel() {
               }}
               className="absolute inset-0"
             >
-              <Link href={watchHref} className="absolute inset-0 block cursor-pointer z-0">
+              <Link href={watchHref} onClick={() => console.log(`[Client-HeroCarousel] Clicked Slide Background Movie ID: ${s.id}, Title: "${s.title}"`)} className="absolute inset-0 block cursor-pointer z-0">
                 <SlideBackground
                   slide={s}
                   parallaxX={parallaxX}

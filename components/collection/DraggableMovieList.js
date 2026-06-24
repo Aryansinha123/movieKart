@@ -39,6 +39,7 @@ function MovieListItem({ movie, index, onRemove, canEdit, onDragStart, onDragOve
       <div className="flex-1 min-w-0">
         <Link
           href={getMovieUrl(movie.id, movie.title)}
+          onClick={() => console.log(`[Client-DraggableMovieList] Clicked Movie ID: ${movie.id}, Title: "${movie.title}"`)}
           className="font-medium text-white text-sm hover:text-purple-400 transition-colors truncate block"
         >
           {movie.title}

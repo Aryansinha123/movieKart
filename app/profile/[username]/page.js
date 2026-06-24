@@ -119,7 +119,7 @@ export default async function ProfilePage(context) {
               {watchedMoviesDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {watchedMoviesDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-emerald-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Recently Watched Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-emerald-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -158,7 +158,7 @@ export default async function ProfilePage(context) {
               {watchlistDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {watchlistDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-blue-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Watchlist Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-blue-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -197,7 +197,7 @@ export default async function ProfilePage(context) {
               {favoritesDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {favoritesDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-pink-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Favorite Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-pink-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -314,7 +314,7 @@ export default async function ProfilePage(context) {
                     )}
                     
                     <div className="mt-4 flex justify-between items-center">
-                      <Link href={getMovieUrl(activity.movieId, activity.meta?.movieTitle)} className="text-[10px] font-bold uppercase tracking-widest bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors border border-zinc-700">
+                      <Link href={getMovieUrl(activity.movieId, activity.meta?.movieTitle)} onClick={() => console.log(`[Client-Profile] Clicked Activity Movie ID: ${activity.movieId}, Title: "${activity.meta?.movieTitle || ""}"`)} className="text-[10px] font-bold uppercase tracking-widest bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors border border-zinc-700">
                         View Movie
                       </Link>
                       <span className="text-[10px] text-zinc-600 font-medium">

@@ -10,8 +10,9 @@ export function slugify(text) {
 }
 
 export function getMovieUrl(id, title) {
+  if (!id) return "/movie";
   if (!title) return `/movie/${id}`;
-  return `/movie/${slugify(title)}`;
+  return `/movie/${id}-${slugify(title)}`;
 }
 
 export function getPersonUrl(id, name) {
