@@ -144,10 +144,10 @@ export default function MovieCard({
                 width={500}
                 height={750}
                 priority={priority}
-                className="w-full h-[350px] object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full aspect-[2/3] object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="w-full h-[350px] bg-zinc-800 flex items-center justify-center text-zinc-500 text-sm">
+              <div className="w-full aspect-[2/3] bg-zinc-800 flex items-center justify-center text-zinc-500 text-sm">
                 No Image
               </div>
             )}
@@ -181,7 +181,7 @@ export default function MovieCard({
 
             <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col justify-end">
               <h2 className="font-bold text-lg text-white leading-tight line-clamp-2">
-                {movie.title}
+                {movie.displayTitle || movie.title}
               </h2>
 
               <div className="flex items-center gap-3 mt-2">

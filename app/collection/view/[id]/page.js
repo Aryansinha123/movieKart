@@ -15,6 +15,9 @@ import {
   Trash2,
   ListOrdered,
   ImageIcon,
+  MoreVertical,
+  Search,
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import CollectionCoverBanner from "@/components/collection/CollectionCoverBanner";
@@ -22,7 +25,50 @@ import WatchNowButton from "@/components/collection/WatchNowButton";
 import DraggableMovieList from "@/components/collection/DraggableMovieList";
 import CollectionEditModal from "@/components/collection/CollectionEditModal";
 import MovieCard from "@/components/movie/MovieCard";
+import CollectionSearchBar from "@/components/collection/CollectionSearchBar";
+import AddMoviesModal from "@/components/collection/AddMoviesModal";
 import { getBannerGradient } from "@/lib/collectionConstants";
+import Fuse from "fuse.js";
+
+const cleanString = (str) => {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents/diacritics
+    .replace(/[^a-z0-9]/g, ""); // remove spaces, punctuation, special characters
+};
+
+function HighlightedText({ text, query }) {
+  if (!text) return null;
+  if (!query || !query.trim()) return <span>{text}</span>;
+
+  // Split query by spaces to highlight individual words/tokens
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return <span>{text}</span>;
+
+  // Escape regex special chars
+  const escapedWords = words.map(w => w.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"));
+  
+  // Try to match exact query as a contiguous phrase first if possible
+  const fullEscaped = query.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const regex = new RegExp(`(${fullEscaped}|${escapedWords.join("|")})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <span>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-purple-500/40 text-purple-100 rounded px-0.5 font-bold">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+}
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -130,6 +176,31 @@ function CollectionComments({ collectionMongoId }) {
   );
 }
 
+function DescriptionWithReadMore({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const shouldTruncate = text.length > 200;
+  
+  if (!shouldTruncate) {
+    return (
+      <p className="text-zinc-300 max-w-2xl text-sm md:text-base leading-relaxed mb-4">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-zinc-300 max-w-2xl text-sm md:text-base leading-relaxed mb-4">
+      {expanded ? text : `${text.substring(0, 200)}... `}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-purple-400 hover:text-purple-300 ml-1 font-bold focus:outline-none inline cursor-pointer text-xs uppercase tracking-wider"
+      >
+        {expanded ? "Read Less" : "Read More"}
+      </button>
+    </p>
+  );
+}
+
 export default function CollectionViewPage() {
   const params = useParams();
   const id = typeof params?.id === "string" ? params.id : "";
@@ -139,6 +210,17 @@ export default function CollectionViewPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [addMovieId, setAddMovieId] = useState("");
+  const [actionsDropdownOpen, setActionsDropdownOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [localQuery, setLocalQuery] = useState("");
+  const [debouncedLocalQuery, setDebouncedLocalQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLocalQuery(localQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localQuery]);
 
   async function loadCollection() {
     const headers = {};
@@ -249,6 +331,35 @@ export default function CollectionViewPage() {
     }
   }
 
+  async function handleAddMovieById(movieId) {
+    const token = getToken();
+    const endpoint = collection.isOwner
+      ? `/api/collections/${id}/movies`
+      : "/api/saved-collections/personalize";
+
+    const body = collection.isOwner
+      ? { movieId }
+      : { collectionId: id, movieId, action: "add" };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      toast.success("Added");
+      const col = await loadCollection();
+      setCollection(col);
+    } catch (e) {
+      toast.error(e.message || "Failed to add");
+    }
+  }
+
   async function handleDuplicate() {
     const token = getToken();
     try {
@@ -352,6 +463,78 @@ export default function CollectionViewPage() {
   const canEdit = isOwner || isSaved;
   const gradient = getBannerGradient(collection.bannerStyle);
 
+  const filteredMovies = (() => {
+    const movies = collection.movies || [];
+    if (!debouncedLocalQuery.trim()) return movies;
+
+    const q = debouncedLocalQuery.trim();
+    const qLower = q.toLowerCase();
+    const cq = cleanString(q);
+    const queryWords = qLower.split(/\s+/).filter(Boolean);
+
+    // Initialize and run Fuse.js search
+    const fuse = new Fuse(movies, {
+      keys: [
+        { name: "title", weight: 0.5 },
+        { name: "original_title", weight: 0.3 },
+        { name: "genres.name", weight: 0.1 },
+        { name: "release_date", weight: 0.1 }
+      ],
+      threshold: 0.4,
+      includeScore: true,
+      includeMatches: true,
+      ignoreLocation: true
+    });
+
+    const fuseResults = fuse.search(q);
+    const fuseMap = new Map(fuseResults.map(res => [res.item.id, res]));
+
+    const scored = movies.map(movie => {
+      const titleLower = (movie.title || "").toLowerCase().trim();
+      const cleanTitle = cleanString(movie.title);
+      const cleanOriginal = cleanString(movie.original_title);
+      
+      const isExact = titleLower === qLower;
+      const isStartsWith = titleLower.startsWith(qLower);
+      const containsAll = queryWords.length > 0 && queryWords.every(w => titleLower.includes(w));
+      const isSubstring = cq.length >= 2 && (cleanTitle.includes(cq) || cleanOriginal.includes(cq));
+      
+      const fuseMatch = fuseMap.get(movie.id);
+      const isFuzzy = !!fuseMatch;
+      const fuzzyScore = fuseMatch ? (fuseMatch.score ?? 1) : 1;
+
+      // Determine highest matching tier (smaller rank value = higher priority)
+      let tier = 6; // no match
+      if (isExact) tier = 1;
+      else if (isStartsWith) tier = 2;
+      else if (containsAll) tier = 3;
+      else if (isSubstring) tier = 4;
+      else if (isFuzzy) tier = 5;
+
+      return {
+        movie,
+        tier,
+        fuzzyScore
+      };
+    });
+
+    // Filter matching movies
+    const matches = scored.filter(item => item.tier < 6);
+
+    // Sort by match tier (1 to 5), then by fuzzy match score
+    matches.sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      return a.fuzzyScore - b.fuzzyScore;
+    });
+
+    // Attach displayTitle element for title highlighting
+    return matches.map(item => {
+      const copy = { ...item.movie };
+      copy.displayTitle = <HighlightedText text={item.movie.title} query={q} />;
+      return copy;
+    });
+  })();
+
   return (
     <main className="min-h-screen bg-black text-white pb-20">
       <div className="relative h-[40vh] md:h-[50vh] overflow-hidden">
@@ -380,9 +563,7 @@ export default function CollectionViewPage() {
             {collection.name}
           </h1>
           {collection.description && (
-            <p className="text-zinc-300 max-w-2xl text-sm md:text-base leading-relaxed mb-4">
-              {collection.description}
-            </p>
+            <DescriptionWithReadMore text={collection.description} />
           )}
           <p className="text-zinc-500 text-sm mb-4">
             {collection.isPublic ? "Public" : "Private"} ·{" "}
@@ -433,7 +614,7 @@ export default function CollectionViewPage() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <WatchNowButton
               collection={collection}
               items={collection.items}
@@ -448,14 +629,14 @@ export default function CollectionViewPage() {
               <>
                 <button
                   onClick={() => setEditOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Pencil size={16} />
                   Edit
                 </button>
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                  className={`hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
                     reorderMode ? "bg-purple-600 border-purple-500" : "bg-white/8 hover:bg-white/14 border-white/15"
                   }`}
                 >
@@ -464,21 +645,21 @@ export default function CollectionViewPage() {
                 </button>
                 <button
                   onClick={handleShare}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Share2 size={16} />
                   Share
                 </button>
                 <button
                   onClick={handleDuplicate}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Copy size={16} />
                   Duplicate
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Trash2 size={16} />
                   Delete
@@ -490,14 +671,14 @@ export default function CollectionViewPage() {
               <>
                 <button
                   onClick={() => setEditOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <ImageIcon size={16} />
                   Personalize
                 </button>
                 <button
                   onClick={() => setReorderMode(!reorderMode)}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                  className={`hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
                     reorderMode ? "bg-purple-600 border-purple-500" : "bg-white/8 hover:bg-white/14 border-white/15"
                   }`}
                 >
@@ -506,19 +687,98 @@ export default function CollectionViewPage() {
                 </button>
                 <button
                   onClick={handleShare}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Share2 size={16} />
                   Share
                 </button>
                 <button
                   onClick={handleRemoveFromLibrary}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-all cursor-pointer"
+                  className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-all cursor-pointer"
                 >
                   <Trash2 size={16} />
                   Remove
                 </button>
               </>
+            )}
+
+            {/* Mobile Actions Dropdown Menu */}
+            {canEdit && (
+              <div className="relative md:hidden shrink-0">
+                <button
+                  onClick={() => setActionsDropdownOpen(!actionsDropdownOpen)}
+                  className="inline-flex items-center justify-center p-2.5 rounded-xl bg-white/8 hover:bg-white/14 border border-white/15 text-sm font-semibold transition-all cursor-pointer text-zinc-300"
+                  aria-label="More Actions"
+                >
+                  <MoreVertical size={18} />
+                </button>
+                {actionsDropdownOpen && (
+                  <div className="absolute right-0 bottom-full mb-2 w-48 rounded-xl bg-zinc-950 border border-zinc-800 shadow-2xl p-2 z-[999] space-y-1">
+                    {isOwner && (
+                      <>
+                        <button
+                          onClick={() => { setEditOpen(true); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white"
+                        >
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => { setReorderMode(!reorderMode); setActionsDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white ${reorderMode ? "text-purple-400 font-bold" : ""}`}
+                        >
+                          <ListOrdered size={14} /> {reorderMode ? "Done" : "Reorder"}
+                        </button>
+                        <button
+                          onClick={() => { handleShare(); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white"
+                        >
+                          <Share2 size={14} /> Share
+                        </button>
+                        <button
+                          onClick={() => { handleDuplicate(); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white"
+                        >
+                          <Copy size={14} /> Duplicate
+                        </button>
+                        <button
+                          onClick={() => { handleDelete(); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-red-400"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </>
+                    )}
+                    {isSaved && (
+                      <>
+                        <button
+                          onClick={() => { setEditOpen(true); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white"
+                        >
+                          <ImageIcon size={14} /> Personalize
+                        </button>
+                        <button
+                          onClick={() => { setReorderMode(!reorderMode); setActionsDropdownOpen(false); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white ${reorderMode ? "text-purple-400 font-bold" : ""}`}
+                        >
+                          <ListOrdered size={14} /> Reorder
+                        </button>
+                        <button
+                          onClick={() => { handleShare(); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-white"
+                        >
+                          <Share2 size={14} /> Share
+                        </button>
+                        <button
+                          onClick={() => { handleRemoveFromLibrary(); setActionsDropdownOpen(false); }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-zinc-900 transition-colors flex items-center gap-2 text-red-400"
+                        >
+                          <Trash2 size={14} /> Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -530,55 +790,84 @@ export default function CollectionViewPage() {
             Watch Order
             <span className="text-zinc-500 font-normal text-sm ml-2">({collection.movies?.length || 0})</span>
           </h2>
-          {canEdit && reorderMode && (
-            <div className="flex items-center gap-2">
-              <input
-                value={addMovieId}
-                onChange={(e) => setAddMovieId(e.target.value)}
-                placeholder="TMDB ID..."
-                className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-sm text-white outline-none w-32"
-              />
+        </div>
+
+        {/* Sticky Search and Add Button Panel */}
+        <div className="sticky top-0 z-20 bg-black/95 backdrop-blur-md py-4 border-b border-zinc-800/80 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="relative flex-1 max-w-2xl">
+            <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-zinc-500">
+              <Search size={16} />
+            </span>
+            <input
+              type="text"
+              placeholder="Search in this collection by title, year, or genre..."
+              value={localQuery}
+              onChange={(e) => setLocalQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-zinc-900 border border-zinc-850 text-white placeholder-zinc-500 outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/5 transition-all text-sm"
+            />
+            {localQuery && (
               <button
-                onClick={handleAddMovie}
-                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold cursor-pointer"
+                onClick={() => setLocalQuery("")}
+                className="absolute inset-y-0 right-3.5 flex items-center text-zinc-500 hover:text-white"
               >
-                <Plus size={14} />
-                Add Movie
+                <X size={16} />
               </button>
-            </div>
+            )}
+          </div>
+
+          {canEdit && (
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-all cursor-pointer shadow-lg shadow-purple-650/10"
+            >
+              <Plus size={16} />
+              Add Movie
+            </button>
           )}
         </div>
 
-        {collection.movies?.length > 0 ? (
+        {canEdit && reorderMode && (
+          <div className="w-full mb-8">
+            <CollectionSearchBar
+              onAddMovie={handleAddMovieById}
+              existingMovieIds={collection.movies?.map(m => m.id) || []}
+            />
+          </div>
+        )}
+
+        {filteredMovies.length > 0 ? (
           reorderMode && canEdit ? (
             <DraggableMovieList
-              movies={collection.movies}
+              movies={filteredMovies}
               onReorder={handleReorder}
               onRemove={handleRemoveMovie}
               canEdit
             />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5">
-              {collection.movies.map((movie, index) => (
-                <div key={movie.id} className="relative">
-                  <div className="absolute top-2 left-2 z-10 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-black/70 backdrop-blur-sm text-[11px] font-bold text-white flex items-center justify-center border border-white/10">
-                    {index + 1}
-                  </div>
-                  {movie.watched && (
-                    <div className="absolute top-2 right-2 z-10 p-1 rounded-full bg-green-500/90 text-black">
-                      <CheckCircle2 size={14} />
+              {filteredMovies.map((movie) => {
+                const originalIndex = (collection.movies || []).findIndex(m => m.id === movie.id);
+                return (
+                  <div key={movie.id} className="relative">
+                    <div className="absolute top-2 left-2 z-10 min-w-[1.5rem] h-6 px-1.5 rounded-full bg-black/70 backdrop-blur-sm text-[11px] font-bold text-white flex items-center justify-center border border-white/10">
+                      {originalIndex + 1}
                     </div>
-                  )}
-                  <MovieCard movie={movie} />
-                </div>
-              ))}
+                    {movie.watched && (
+                      <div className="absolute top-2 right-2 z-10 p-1 rounded-full bg-green-500/90 text-black">
+                        <CheckCircle2 size={14} />
+                      </div>
+                    )}
+                    <MovieCard movie={movie} />
+                  </div>
+                );
+              })}
             </div>
           )
         ) : (
           <div className="text-center py-16 border border-dashed border-zinc-800 rounded-2xl text-zinc-500">
-            <p>This collection is empty.</p>
-            {canEdit && (
-              <p className="text-sm mt-2">Use &quot;Reorder&quot; mode to add movies by TMDB ID, or add from any movie page.</p>
+            <p>{localQuery ? "No movies found matching your search." : "This collection is empty."}</p>
+            {canEdit && !localQuery && (
+              <p className="text-sm mt-2">Use &quot;Add Movie&quot; button to add movies, or add from any movie page.</p>
             )}
           </div>
         )}
@@ -602,6 +891,13 @@ export default function CollectionViewPage() {
           }}
         />
       )}
+
+      <AddMoviesModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAddMovie={handleAddMovieById}
+        existingMovieIds={collection.movies?.map(m => m.id) || []}
+      />
     </main>
   );
 }

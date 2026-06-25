@@ -4,6 +4,7 @@ import { getImagePath } from "@/utils/imagePath";
 import { MapPin, Cake, User, Film } from "lucide-react";
 import { getPersonUrl } from "@/utils/slugify";
 import PersonFilmography from "@/components/profile/PersonFilmography";
+import FavoriteActorButton from "@/components/people/FavoriteActorButton";
 
 export const dynamic = "force-dynamic";
 
@@ -279,7 +280,12 @@ export default async function PersonPage({ params }) {
           {/* Biography and Filmography */}
           <div className="flex-1 space-y-12">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">{person.name}</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">{person.name}</h1>
+                <div className="w-fit">
+                  <FavoriteActorButton actorId={person.id} actorName={person.name} />
+                </div>
+              </div>
               {person.biography ? (
                 <div className="space-y-4">
                   <h2 className="text-xl font-bold text-zinc-300">Biography</h2>

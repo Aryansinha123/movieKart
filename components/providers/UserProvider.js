@@ -8,6 +8,7 @@ export function UserProvider({ children }) {
   const [watchedIds, setWatchedIds] = useState(new Set());
   const [watchlistIds, setWatchlistIds] = useState(new Set());
   const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [favoriteActorIds, setFavoriteActorIds] = useState(new Set());
   const [notInterestedIds, setNotInterestedIds] = useState(new Set());
   const [notInterestedMovies, setNotInterestedMovies] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -18,6 +19,7 @@ export function UserProvider({ children }) {
       setWatchedIds(new Set());
       setWatchlistIds(new Set());
       setFavoriteIds(new Set());
+      setFavoriteActorIds(new Set());
       setNotInterestedIds(new Set());
       setNotInterestedMovies([]);
       setIsLoaded(true);
@@ -33,6 +35,7 @@ export function UserProvider({ children }) {
         setWatchedIds(new Set(data.watchedMovies.map(id => Number(id))));
         setWatchlistIds(new Set(data.watchlist.map(id => Number(id))));
         setFavoriteIds(new Set((data.favorites || []).map(id => Number(id))));
+        setFavoriteActorIds(new Set((data.favoriteActors || []).map(id => Number(id))));
         
         const hiddenArr = data.notInterested || [];
         setNotInterestedIds(new Set(hiddenArr.map(item => Number(item.movieId))));
@@ -177,6 +180,7 @@ export function UserProvider({ children }) {
       watchedIds, 
       watchlistIds, 
       favoriteIds, 
+      favoriteActorIds, 
       notInterestedIds, 
       notInterestedMovies, 
       isLoaded, 

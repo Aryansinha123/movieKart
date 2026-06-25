@@ -13,7 +13,7 @@ export async function GET(req) {
     const decoded = verifyToken(token);
     if (!decoded) return NextResponse.json({ success: false });
 
-    const user = await User.findById(decoded.id).select("watchedMovies watchlist favorites notInterested");
+    const user = await User.findById(decoded.id).select("watchedMovies watchlist favorites notInterested favoriteActors");
     if (!user) return NextResponse.json({ success: false });
 
     return NextResponse.json({
@@ -22,6 +22,7 @@ export async function GET(req) {
       watchlist: user.watchlist || [],
       favorites: user.favorites || [],
       notInterested: user.notInterested || [],
+      favoriteActors: user.favoriteActors || [],
     });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message });

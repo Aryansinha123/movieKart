@@ -3,10 +3,23 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { GripVertical, X, CheckCircle2 } from "lucide-react";
+import { GripVertical, X, CheckCircle2, ArrowUp, ArrowDown } from "lucide-react";
 import { getMovieUrl } from "@/utils/slugify";
 
-function MovieListItem({ movie, index, onRemove, canEdit, onDragStart, onDragOver, onDrop, isDragging }) {
+function MovieListItem({ 
+  movie, 
+  index, 
+  onRemove, 
+  canEdit, 
+  onDragStart, 
+  onDragOver, 
+  onDrop, 
+  isDragging,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast 
+}) {
   const poster = movie.poster_path
     ? `https://image.tmdb.org/t/p/w154${movie.poster_path}`
     : null;
@@ -22,8 +35,39 @@ function MovieListItem({ movie, index, onRemove, canEdit, onDragStart, onDragOve
       } ${canEdit ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       {canEdit && (
-        <div className="p-1 text-zinc-600 hover:text-zinc-400 touch-none">
-          <GripVertical size={18} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="p-1 text-zinc-600 hover:text-zinc-400 touch-none hidden md:block">
+            <GripVertical size={18} />
+          </div>
+          {/* Touch-friendly move buttons */}
+          <div className="flex gap-1">
+            <button
+              type="button"
+              disabled={isFirst}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMoveUp?.(index);
+              }}
+              className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:text-zinc-450 transition-colors cursor-pointer flex items-center justify-center"
+              aria-label="Move Up"
+            >
+              <ArrowUp size={12} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              disabled={isLast}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMoveDown?.(index);
+              }}
+              className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white disabled:opacity-20 disabled:hover:text-zinc-450 transition-colors cursor-pointer flex items-center justify-center"
+              aria-label="Move Down"
+            >
+              <ArrowDown size={12} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       )}
       <span className="w-7 h-7 rounded-full bg-zinc-800 text-xs font-bold flex items-center justify-center text-zinc-400 shrink-0">
@@ -52,7 +96,7 @@ function MovieListItem({ movie, index, onRemove, canEdit, onDragStart, onDragOve
       {canEdit && onRemove && (
         <button
           onClick={() => onRemove(movie.id)}
-          className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+          className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 md:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
           aria-label="Remove"
         >
           <X size={16} />
@@ -97,6 +141,26 @@ export default function DraggableMovieList({
     setDragIndex(null);
   }
 
+  function handleMoveUp(index) {
+    if (index === 0) return;
+    const newItems = [...items];
+    const temp = newItems[index];
+    newItems[index] = newItems[index - 1];
+    newItems[index - 1] = temp;
+    setItems(newItems);
+    onReorder?.(newItems.map((m) => m.id));
+  }
+
+  function handleMoveDown(index) {
+    if (index === items.length - 1) return;
+    const newItems = [...items];
+    const temp = newItems[index];
+    newItems[index] = newItems[index + 1];
+    newItems[index + 1] = temp;
+    setItems(newItems);
+    onReorder?.(newItems.map((m) => m.id));
+  }
+
   if (!items.length) {
     return (
       <div className="text-center py-12 text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-2xl">
@@ -118,6 +182,10 @@ export default function DraggableMovieList({
           onDragStart={() => handleDragStart(index)}
           onDragOver={(e) => handleDragOver(e, index)}
           onDrop={handleDrop}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          isFirst={index === 0}
+          isLast={index === items.length - 1}
         />
       ))}
     </div>

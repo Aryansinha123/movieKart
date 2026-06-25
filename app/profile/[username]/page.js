@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchMovieDetails } from "@/lib/tmdb";
 import ProfileHeaderClient from "@/components/profile/ProfileHeaderClient";
+import FavoriteActorsSection from "@/components/profile/FavoriteActorsSection";
 import { FolderHeart, Clapperboard, Calendar, Star, Eye, History, Bookmark, Heart } from "lucide-react";
 import { getMovieUrl } from "@/utils/slugify";
 
@@ -64,6 +65,30 @@ async function getMoviesDetails(movieIds) {
   return results.filter(Boolean);
 }
 
+// Helper to fetch details for multiple actors
+async function getActorsDetails(actorIds) {
+  if (!actorIds || !Array.isArray(actorIds)) return [];
+  const promises = actorIds.slice(0, 12).map(async (id) => {
+    if (!process.env.TMDB_API_KEY) return null;
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/person/${id}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+          accept: "application/json",
+        },
+        next: { revalidate: 3600 }
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.error(`Failed to fetch actor ${id}:`, err);
+      return null;
+    }
+  });
+  const results = await Promise.all(promises);
+  return results.filter(Boolean);
+}
+
 async function getCollectionThumbs(collections) {
   const thumbMap = {};
   const promises = collections.map(async (c) => {
@@ -95,6 +120,7 @@ export default async function ProfilePage(context) {
   const watchedMoviesDetails = await getMoviesDetails(user.watchedMovies);
   const watchlistDetails = await getMoviesDetails(user.watchlist);
   const favoritesDetails = await getMoviesDetails(user.favorites);
+  const favoriteActorsDetails = await getActorsDetails(user.favoriteActors);
   const collectionThumbs = await getCollectionThumbs(user.publicCollections || []);
   return (
     <main className="min-h-screen bg-black text-white p-6 md:p-10">
@@ -119,7 +145,7 @@ export default async function ProfilePage(context) {
               {watchedMoviesDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {watchedMoviesDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Recently Watched Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-emerald-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-emerald-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -158,7 +184,7 @@ export default async function ProfilePage(context) {
               {watchlistDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {watchlistDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Watchlist Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-blue-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-blue-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -197,7 +223,7 @@ export default async function ProfilePage(context) {
               {favoritesDetails.length > 0 ? (
                 <div className="flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-thin">
                   {favoritesDetails.map((m) => (
-                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} onClick={() => console.log(`[Client-Profile] Clicked Favorite Movie ID: ${m.id}, Title: "${m.title}"`)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-pink-500/30">
+                    <Link key={m.id} href={getMovieUrl(m.id, m.title)} className="min-w-[140px] md:min-w-[160px] snap-start group relative rounded-xl overflow-hidden border border-zinc-800 transition-all hover:border-pink-500/30">
                       {m.poster_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${m.poster_path}`}
@@ -222,6 +248,11 @@ export default async function ProfilePage(context) {
                   No favorite movies yet.
                 </div>
               )}
+            </div>
+
+            {/* Favorite Actors */}
+            <div>
+              <FavoriteActorsSection initialActors={favoriteActorsDetails} profileUserId={user._id} />
             </div>
 
             {/* Public collections */}
@@ -314,7 +345,7 @@ export default async function ProfilePage(context) {
                     )}
                     
                     <div className="mt-4 flex justify-between items-center">
-                      <Link href={getMovieUrl(activity.movieId, activity.meta?.movieTitle)} onClick={() => console.log(`[Client-Profile] Clicked Activity Movie ID: ${activity.movieId}, Title: "${activity.meta?.movieTitle || ""}"`)} className="text-[10px] font-bold uppercase tracking-widest bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors border border-zinc-700">
+                      <Link href={getMovieUrl(activity.movieId, activity.meta?.movieTitle)} className="text-[10px] font-bold uppercase tracking-widest bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg text-zinc-300 transition-colors border border-zinc-700">
                         View Movie
                       </Link>
                       <span className="text-[10px] text-zinc-600 font-medium">

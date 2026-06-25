@@ -136,7 +136,9 @@ async function getMovie(idStr) {
     const numericId = parseInt(idStr, 10);
     const isTv = numericId < 0;
     const realId = isTv ? -numericId : numericId;
-    const path = isTv ? `/tv/${realId}` : `/movie/${realId}`;
+    const path = isTv 
+      ? `/tv/${realId}?append_to_response=images,keywords,credits` 
+      : `/movie/${realId}?append_to_response=images,keywords,credits`;
 
     const res = await fetchWithRetry(`https://api.themoviedb.org/3${path}`, {
       headers: {
@@ -162,6 +164,12 @@ async function getMovie(idStr) {
       adult: data.adult,
       number_of_seasons: data.number_of_seasons,
       number_of_episodes: data.number_of_episodes,
+      seasons: data.seasons,
+      networks: data.networks,
+      status: data.status,
+      tagline: data.tagline,
+      created_by: data.created_by,
+      images: data.images,
     };
   } catch (err) {
     console.error(`Failed to fetch movie ${idStr}:`, err?.message || err);
@@ -442,11 +450,30 @@ export default async function MoviePage({ params }) {
                 {movie.title}
               </h1>
 
+              {movie.tagline && (
+                <p className="text-zinc-400 italic text-sm md:text-base lg:text-lg mt-2 font-medium">
+                  &ldquo;{movie.tagline}&rdquo;
+                </p>
+              )}
+
               <p className="text-zinc-300 mt-4 text-sm md:text-base lg:text-lg max-w-2xl line-clamp-3 md:line-clamp-none">
                 {movie.overview}
               </p>
 
-              {credits?.crew?.find(c => c.job === "Director") && (
+              {movie.media_type === "tv" && movie.created_by?.length > 0 ? (
+                <div className="mt-4 text-sm md:text-base">
+                  <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Created By:</span>
+                  {movie.created_by.map((creator, index) => (
+                    <Link 
+                      key={creator.id}
+                      href={getPersonUrl(creator.id, creator.name)}
+                      className="ml-2 text-white font-bold hover:text-red-500 transition-colors"
+                    >
+                      {creator.name}{index < movie.created_by.length - 1 ? ", " : ""}
+                    </Link>
+                  ))}
+                </div>
+              ) : credits?.crew?.find(c => c.job === "Director") ? (
                 <div className="mt-4 text-sm md:text-base">
                   <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Director:</span>
                   <Link 
@@ -456,7 +483,7 @@ export default async function MoviePage({ params }) {
                     {credits.crew.find(c => c.job === "Director").name}
                   </Link>
                 </div>
-              )}
+              ) : null}
 
               <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-6 mt-6 text-zinc-400 text-sm md:text-base font-medium">
                 <p className="flex items-center gap-1.5 text-amber-400">
@@ -469,6 +496,7 @@ export default async function MoviePage({ params }) {
                   <>
                     <p>{movie.number_of_seasons} Seasons</p>
                     <p>{movie.number_of_episodes} Episodes</p>
+                    {movie.runtime > 0 && <p>{movie.runtime} mins per episode</p>}
                   </>
                 ) : (
                   <p>{movie.runtime} mins</p>
@@ -477,6 +505,12 @@ export default async function MoviePage({ params }) {
                 {movie.adult && (
                   <span className="px-1.5 py-0.5 rounded border border-red-500/50 text-red-500 text-[10px] font-bold">
                     18+
+                  </span>
+                )}
+
+                {movie.media_type === "tv" && movie.status && (
+                  <span className="px-2 py-0.5 rounded border border-cyan-500/50 text-cyan-400 text-[10px] font-bold uppercase tracking-wider bg-cyan-950/20">
+                    Status: {movie.status}
                   </span>
                 )}
               </div>
@@ -502,6 +536,41 @@ export default async function MoviePage({ params }) {
                   </span>
                 ))}
               </div>
+
+              {movie.networks?.length > 0 && (
+                <div className="mt-4 flex flex-wrap justify-center md:justify-start items-center gap-3">
+                  <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Networks:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {movie.networks.map(net => (
+                      <span key={net.id} className="px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                        {net.logo_path ? (
+                          <div className="relative w-12 h-4">
+                            <Image
+                              src={`https://image.tmdb.org/t/p/h30${net.logo_path}`}
+                              alt={net.name}
+                              fill
+                              className="object-contain filter invert"
+                            />
+                          </div>
+                        ) : net.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {movie.production_companies?.length > 0 && (
+                <div className="mt-4 flex flex-wrap justify-center md:justify-start items-center gap-3">
+                  <span className="text-zinc-500 font-semibold uppercase tracking-wider text-xs">Production:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {movie.production_companies.slice(0, 3).map(company => (
+                      <span key={company.id} className="px-2 py-0.5 rounded bg-zinc-900/60 border border-zinc-800/80 text-[10px] font-medium text-zinc-400">
+                        {company.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <WhereToWatch providers={providers} watchLink={watchLink} variant="desktop" />
 
@@ -567,7 +636,7 @@ export default async function MoviePage({ params }) {
 
       {/* Cast */}
       {Array.isArray(credits?.cast) && credits.cast.length > 0 ? (
-        <section className="max-w-6xl mx-auto px-10 pt-10">
+        <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
           <h2 className="text-2xl font-bold">Cast</h2>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {credits.cast.slice(0, 12).map((p) => (
@@ -598,6 +667,72 @@ export default async function MoviePage({ params }) {
           </div>
         </section>
       ) : null}
+
+      {/* Seasons List (TV only) */}
+      {movie.media_type === "tv" && movie.seasons?.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
+          <h2 className="text-2xl font-bold mb-6">Seasons</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {movie.seasons
+              .filter(s => s.season_number > 0)
+              .map(season => (
+                <div key={season.id} className="flex gap-4 rounded-xl border border-zinc-850 bg-zinc-900/30 p-4">
+                  <div className="relative w-20 h-28 shrink-0 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950">
+                    {season.poster_path ? (
+                      <Image
+                        src={`https://image.tmdb.org/t/p/w185${season.poster_path}`}
+                        alt={season.name}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-zinc-700 bg-zinc-900 text-[10px] font-bold">
+                        No Poster
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h3 className="font-bold text-base text-white truncate">{season.name}</h3>
+                    <p className="text-xs text-amber-500 font-semibold mt-1">
+                      {season.episode_count} Episodes
+                    </p>
+                    {season.air_date && (
+                      <p className="text-[11px] text-zinc-500 mt-1">
+                        Aired: {new Date(season.air_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                      </p>
+                    )}
+                    {season.overview && (
+                      <p className="text-xs text-zinc-400 mt-2 line-clamp-2 leading-relaxed">
+                        {season.overview}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* Gallery Section */}
+      {movie.images?.backdrops?.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
+          <h2 className="text-2xl font-bold mb-6">Gallery</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {movie.images.backdrops.slice(0, 6).map((img, idx) => (
+              <div key={idx} className="aspect-video relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group">
+                <Image
+                  src={`https://image.tmdb.org/t/p/w780${img.file_path}`}
+                  alt={`${movie.title} Backdrop ${idx + 1}`}
+                  fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recommendations */}
       <Recommendations movieId={movie.id} />

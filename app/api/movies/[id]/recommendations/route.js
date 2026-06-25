@@ -100,7 +100,7 @@ export async function GET(req, context) {
     }
 
     const collectionId = currentMovie.belongs_to_collection?.id;
-    const director = currentMovie.credits?.crew?.find(c => c.job === "Director");
+    const director = currentMovie.credits?.crew?.find(c => c.job === "Director") || currentMovie.created_by?.[0];
     const topActors = currentMovie.credits?.cast?.slice(0, 3) || [];
 
     // Parallel fetching of all related candidate groups
