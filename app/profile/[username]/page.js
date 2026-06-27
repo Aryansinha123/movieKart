@@ -313,6 +313,68 @@ export default async function ProfilePage(context) {
                 </div>
               )}
             </div>
+
+            {/* Following collections */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+                  <FolderHeart size={20} />
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold">Following Collections</h2>
+              </div>
+              
+              {Array.isArray(user.followedCollections) && user.followedCollections.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {user.followedCollections.map((c) => (
+                    <Link
+                      key={c._id}
+                      href={`/collection/${c.slug || c._id}`}
+                      className="group relative flex flex-col rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40 hover:border-purple-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5"
+                    >
+                      {/* Card Thumbnail */}
+                      <div className="relative h-40 overflow-hidden">
+                        {c.imageUrl || collectionThumbs[c._id] ? (
+                          <Image
+                            src={c.imageUrl || collectionThumbs[c._id]}
+                            alt={c.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-60"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                            <FolderHeart size={40} className="text-zinc-700" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+                        
+                        <div className="absolute bottom-4 left-5">
+                          <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">
+                            {c.name}
+                          </h3>
+                          {c.owner?.username && (
+                            <span className="text-[10px] text-zinc-400 block mt-0.5">by {c.owner.username}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-5 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-zinc-400">
+                          <Clapperboard size={14} />
+                          <span className="text-sm font-medium">{c.movies?.length || 0} movies</span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Eye size={16} className="text-white" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-zinc-900/20 rounded-2xl p-8 border border-zinc-800/50 text-zinc-500 text-center">
+                  Not following any collections yet.
+                </div>
+              )}
+            </div>
             
           </div>
 

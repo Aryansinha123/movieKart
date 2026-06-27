@@ -229,6 +229,9 @@ export default function CollectionViewPage() {
     const res = await fetch(`/api/collections/${id}`, { headers });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
+    if (data.collection?.slug && typeof window !== "undefined") {
+      window.location.replace(`/collection/${data.collection.slug}`);
+    }
     return data.collection;
   }
 

@@ -29,8 +29,13 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +44,20 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  async function loadNotifications() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.notifications || []);
+      }
+    } catch (e) {}
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -81,11 +100,22 @@ export default function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      loadNotifications();
+      const interval = setInterval(loadNotifications, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setNotificationsOpen(false);
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target) && !e.target.closest('#mobile-menu-trigger')) {
         setMobileMenuOpen(false);
@@ -101,6 +131,46 @@ export default function Navbar() {
     setDropdownOpen(false);
     router.push("/");
   }
+
+  async function handleMarkAllAsRead() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (e) {}
+  }
+
+  async function handleNotificationClick(n) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ notificationIds: [n._id] }),
+      });
+      setNotifications((prev) =>
+        prev.map((item) => (item._id === n._id ? { ...item, read: true } : item))
+      );
+    } catch (e) {}
+    setNotificationsOpen(false);
+    if (n.collectionId) {
+      router.push(`/collection/${n.collectionId}`);
+    }
+  }
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   // Get user initial for avatar
   const userInitial = user?.username
@@ -183,6 +253,61 @@ export default function Navbar() {
 
         {/* Search */}
         {isMounted && user && (pathname === "/" ? <UserSearch /> : <MovieSearch />)}
+
+        {/* Notifications Bell */}
+        {isMounted && user && (
+          <div className="relative" ref={notificationsRef}>
+            <button
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className="relative p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Notifications"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-zinc-900 animate-pulse" />
+              )}
+            </button>
+
+            {notificationsOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-zinc-900 border border-zinc-750 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-950/60">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-xs text-purple-400 hover:text-purple-300 font-bold"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/60 custom-scrollbar">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-zinc-500">No notifications yet.</div>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n._id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`w-full text-left p-3.5 hover:bg-zinc-800/40 transition-colors flex gap-2 items-start ${
+                          !n.read ? "bg-purple-950/10 border-l-2 border-purple-500" : ""
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-zinc-300 leading-normal">{n.message}</p>
+                          <span className="text-[10px] text-zinc-550 block mt-1.5">
+                            {new Date(n.createdAt).toLocaleDateString()}{" "}
+                            {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Auth section */}
         {!isMounted ? (

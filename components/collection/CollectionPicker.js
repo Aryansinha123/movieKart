@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BookmarkPlus, X } from "lucide-react";
+import toast from "react-hot-toast";
 
 function getToken() {
   if (typeof window === "undefined") return "";
@@ -14,7 +15,7 @@ export default function CollectionPicker({ movieId, className, children }) {
   const [isSaving, setIsSaving] = useState(false);
   const [collections, setCollections] = useState([]);
   const [name, setName] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
+  const [visibility, setVisibility] = useState("private");
 
   async function loadCollections() {
     const token = getToken();
@@ -68,12 +69,12 @@ export default function CollectionPicker({ movieId, className, children }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, isPublic }),
+        body: JSON.stringify({ name, visibility }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to create collection.");
       setName("");
-      setIsPublic(false);
+      setVisibility("private");
       await loadCollections();
     } catch (e) {
       toast.error(e?.message || "Failed to create collection.");
@@ -174,7 +175,7 @@ export default function CollectionPicker({ movieId, className, children }) {
                         <div className="min-w-0">
                           <p className="font-semibold truncate">{c.name}</p>
                           <p className="text-xs text-zinc-500 mt-1">
-                            {c.isPublic ? "Public" : "Private"} • {c.movies?.length || 0} movies
+                            {c.visibility || (c.isPublic ? "Public" : "Private")} • {c.movies?.length || 0} movies
                           </p>
                         </div>
                         <span
@@ -199,23 +200,25 @@ export default function CollectionPicker({ movieId, className, children }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Collection name"
-                className="mt-2 w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none"
+                className="mt-2 w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none text-sm"
               />
 
-              <label className="mt-3 flex items-center gap-2 text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
-                />
-                Public (visible on your profile)
-              </label>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                className="mt-3 w-full p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 text-sm text-zinc-300 focus:outline-none cursor-pointer"
+              >
+                <option value="private">Private</option>
+                <option value="unlisted">Unlisted (Link Only)</option>
+                <option value="public">Public</option>
+                <option value="collaborative_private">Collaborative Private</option>
+              </select>
 
               <button
                 type="button"
                 disabled={isSaving}
                 onClick={createCollection}
-                className="mt-3 w-full bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-semibold transition-colors"
+                className="mt-4 w-full bg-red-505 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors cursor-pointer text-white"
               >
                 {isSaving ? "Please wait..." : "Create"}
               </button>
@@ -226,4 +229,3 @@ export default function CollectionPicker({ movieId, className, children }) {
     </>
   );
 }
-

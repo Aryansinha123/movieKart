@@ -65,12 +65,12 @@ export default function CuratedCollectionCard({ collection, variant = "default",
           )}
         </div>
 
-        <div className="p-4">
-          <h3 className={`font-bold text-white leading-tight mb-1.5 ${isLarge ? "text-lg" : "text-base"}`}>
+        <div className="p-4 pr-14">
+          <h3 className={`font-bold text-white leading-tight mb-1.5 truncate ${isLarge ? "text-lg" : "text-base"}`}>
             {collection.title}
           </h3>
-          <p className="text-zinc-400 text-xs line-clamp-2 mb-3 leading-relaxed">
-            {collection.description}
+          <p className="text-zinc-400 text-xs line-clamp-2 mb-3 leading-relaxed h-8">
+            {collection.description || "No description provided."}
           </p>
           <div className="flex items-center gap-2 text-zinc-500 text-xs">
             <Film size={12} />
@@ -78,7 +78,7 @@ export default function CuratedCollectionCard({ collection, variant = "default",
             {collection.tags?.[0] && (
               <>
                 <span className="text-zinc-700">·</span>
-                <span>{collection.tags[0]}</span>
+                <span className="truncate max-w-[100px]">{collection.tags[0]}</span>
               </>
             )}
           </div>
@@ -108,11 +108,6 @@ export default function CuratedCollectionCard({ collection, variant = "default",
         />
       </div>
 
-      {!collection.saved && (
-        <div className="px-4 pb-4 pt-0 sm:hidden">
-          <SaveCuratedButton slug={collection.slug} saved={collection.saved} />
-        </div>
-      )}
     </article>
   );
 }

@@ -14,6 +14,11 @@ const CollectionSchema = new mongoose.Schema(
       trim: true,
       maxlength: 80,
     },
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
+    },
     imageUrl: {
       type: String,
       default: "",
@@ -33,7 +38,7 @@ const CollectionSchema = new mongoose.Schema(
       default: "Custom",
       trim: true,
     },
-  bannerStyle: {
+    bannerStyle: {
       gradient: { type: String, default: "" },
       themeColor: { type: String, default: "" },
       autoGenerate: { type: Boolean, default: false },
@@ -42,6 +47,42 @@ const CollectionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
       index: true,
+    },
+    visibility: {
+      type: String,
+      enum: ["public", "unlisted", "private", "collaborative_private"],
+      default: "private",
+      index: true,
+    },
+    collaborators: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        role: {
+          type: String,
+          enum: ["collaborator"],
+          default: "collaborator",
+        },
+        invitedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    views: {
+      type: Number,
+      default: 0,
+    },
+    likesCount: {
+      type: Number,
+      default: 0,
+    },
+    followersCount: {
+      type: Number,
+      default: 0,
     },
     /** Link-based sharing (read-only view for anyone with the link). */
     shareEnabled: {
@@ -66,5 +107,34 @@ const CollectionSchema = new mongoose.Schema(
 CollectionSchema.index({ ownerId: 1, name: 1 }, { unique: false });
 CollectionSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
 
-export default mongoose.models.Collection || mongoose.model("Collection", CollectionSchema);
+CollectionSchema.pre("save", async function (next) {
+  // Sync isPublic with visibility for compatibility
+  this.isPublic = this.visibility === "public";
 
+  if (!this.slug || this.isModified("name")) {
+    let baseSlug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    if (!baseSlug) baseSlug = "collection";
+
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const existing = await mongoose.models.Collection.findOne({
+        slug: uniqueSlug,
+        _id: { $ne: this._id },
+      });
+      if (!existing) {
+        this.slug = uniqueSlug;
+        break;
+      }
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+  }
+  next();
+});
+
+export default mongoose.models.Collection || mongoose.model("Collection", CollectionSchema);

@@ -33,12 +33,23 @@ export default function UserCollectionCard({ collection, showProgress = false, o
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          <div className="absolute top-3 left-3">
+          <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/50 backdrop-blur-md text-white border border-white/10">
               {collection.category || "Custom"}
             </span>
+            {collection.isCollaborated && (
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-cyan-950/80 border border-cyan-800 text-cyan-300">
+                Collaborator
+              </span>
+            )}
           </div>
           {collection.type === "community-saved" && collection.owner?.username && (
+            <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-[10px] text-zinc-300">
+              <User size={10} />
+              {collection.owner.username}
+            </div>
+          )}
+          {collection.isCollaborated && collection.owner?.username && (
             <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 backdrop-blur-md text-[10px] text-zinc-300">
               <User size={10} />
               {collection.owner.username}

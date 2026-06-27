@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/mongodb";
 import { getUserFromToken } from "@/lib/getUser";
 import Collection from "@/models/Collection";
 import CollectionLike from "@/models/CollectionLike";
+import Notification from "@/models/Notification";
 
 export async function GET(req) {
   try {
@@ -55,9 +56,9 @@ export async function POST(req) {
     if (!col) {
       return NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 });
     }
-    if (!col.isPublic) {
+    if (col.visibility === "private" || col.visibility === "collaborative_private") {
       return NextResponse.json(
-        { success: false, message: "Only public collections can be liked." },
+        { success: false, message: "Only public or unlisted collections can be liked." },
         { status: 403 }
       );
     }
@@ -71,6 +72,20 @@ export async function POST(req) {
     }
 
     const likesCount = await CollectionLike.countDocuments({ collectionId });
+    await Collection.updateOne({ _id: collectionId }, { $set: { likesCount } });
+
+    if (!existing && col.ownerId.toString() !== userData.id) {
+      await Notification.create({
+        recipientId: col.ownerId,
+        senderId: userData.id,
+        senderUsername: userData.username,
+        type: "like",
+        collectionId: col._id,
+        collectionName: col.name,
+        message: `${userData.username} liked your collection "${col.name}"`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       liked: !existing,
@@ -80,3 +95,4 @@ export async function POST(req) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+

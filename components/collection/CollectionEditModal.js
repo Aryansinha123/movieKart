@@ -21,7 +21,9 @@ export default function CollectionEditModal({
   const [name, setName] = useState(collection.name || collection.title || "");
   const [description, setDescription] = useState(collection.description || "");
   const [category, setCategory] = useState(collection.category || "Custom");
-  const [isPublic, setIsPublic] = useState(collection.isPublic || false);
+  const [visibility, setVisibility] = useState(
+    collection.visibility || (collection.isPublic ? "public" : "private")
+  );
   const [bannerUrl, setBannerUrl] = useState(collection.bannerUrl || "");
   const [coverUrl, setCoverUrl] = useState(collection.imageUrl || collection.coverImage || "");
   const [bannerStyle, setBannerStyle] = useState(collection.bannerStyle || {});
@@ -72,7 +74,7 @@ export default function CollectionEditModal({
             name,
             description,
             category,
-            isPublic,
+            visibility,
             bannerUrl,
             imageUrl: coverUrl,
             bannerStyle,
@@ -154,16 +156,18 @@ export default function CollectionEditModal({
                     ))}
                   </select>
                 </div>
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isPublic}
-                      onChange={(e) => setIsPublic(e.target.checked)}
-                      className="w-4 h-4 rounded"
-                    />
-                    Public collection
-                  </label>
+                <div>
+                  <label className="text-xs text-zinc-500 font-semibold uppercase tracking-wider">Visibility</label>
+                  <select
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value)}
+                    className="mt-1 w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none cursor-pointer text-sm"
+                  >
+                    <option value="private">Private</option>
+                    <option value="unlisted">Unlisted (Link Only)</option>
+                    <option value="public">Public</option>
+                    <option value="collaborative_private">Collaborative Private</option>
+                  </select>
                 </div>
               </div>
             </>

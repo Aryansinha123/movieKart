@@ -27,8 +27,14 @@ export async function GET(req) {
     const user = await User.findById(userData.id).select("watchedMovies").lean();
     const watched = user?.watchedMovies || [];
 
-    // User-created collections
-    const myCollections = await Collection.find({ ownerId: userData.id })
+    // User-created or collaborated collections
+    const myCollections = await Collection.find({
+      $or: [
+        { ownerId: userData.id },
+        { "collaborators.userId": userData.id }
+      ]
+    })
+      .populate({ path: "ownerId", select: "username avatar" })
       .sort({ updatedAt: -1 })
       .lean();
 
@@ -47,9 +53,12 @@ export async function GET(req) {
         }
       }
       const progress = computeCollectionProgress(watched, c.movies || []);
+      const isOwner = c.ownerId?._id?.toString() === userData.id || c.ownerId?.toString() === userData.id;
       Object.assign(c, progress, {
         type: "user",
         href: `/collection/view/${c._id}`,
+        isCollaborated: !isOwner,
+        owner: c.ownerId,
       });
     }
 
@@ -131,34 +140,22 @@ export async function GET(req) {
       .slice(0, 8);
     const recommendedCollections = allCurated.filter((c) => !c.featured).slice(0, 8);
 
-  // Community trending
-    const communityTrending = await Collection.aggregate([
+    const { searchParams } = new URL(req.url);
+    const sort = searchParams.get("sort") || "trending";
+
+    // Community trending/discover
+    const pipeline = [
       {
         $match: {
-          isPublic: true,
+          visibility: "public",
           movies: { $exists: true, $type: "array", $not: { $size: 0 } },
         },
       },
       {
-        $lookup: {
-          from: "collectionlikes",
-          localField: "_id",
-          foreignField: "collectionId",
-          as: "likes",
-        },
-      },
-      {
-        $lookup: {
-          from: "savedcollections",
-          localField: "_id",
-          foreignField: "collectionId",
-          as: "saves",
-        },
-      },
-      {
         $addFields: {
-          likesCount: { $size: "$likes" },
-          savesCount: { $size: "$saves" },
+          likesVal: { $ifNull: ["$likesCount", 0] },
+          followersVal: { $ifNull: ["$followersCount", 0] },
+          viewsVal: { $ifNull: ["$views", 0] },
           movieCount: { $size: "$movies" },
         },
       },
@@ -166,14 +163,27 @@ export async function GET(req) {
         $addFields: {
           score: {
             $add: [
-              "$likesCount",
-              { $multiply: ["$savesCount", 1.5] },
-              { $multiply: ["$movieCount", 0.15] },
+              { $multiply: ["$likesVal", 3] },
+              { $multiply: ["$followersVal", 5] },
+              { $multiply: ["$viewsVal", 0.1] },
+              { $multiply: ["$movieCount", 0.05] },
             ],
           },
         },
       },
-      { $sort: { score: -1, updatedAt: -1 } },
+    ];
+
+    if (sort === "liked" || sort === "most_liked") {
+      pipeline.push({ $sort: { likesVal: -1, updatedAt: -1 } });
+    } else if (sort === "newest") {
+      pipeline.push({ $sort: { createdAt: -1 } });
+    } else if (sort === "recently_updated") {
+      pipeline.push({ $sort: { updatedAt: -1 } });
+    } else {
+      pipeline.push({ $sort: { score: -1, updatedAt: -1 } });
+    }
+
+    pipeline.push(
       { $limit: 12 },
       {
         $lookup: {
@@ -190,13 +200,13 @@ export async function GET(req) {
       },
       {
         $project: {
-          likes: 0,
-          saves: 0,
           ownerArr: 0,
           owner: { password: 0, email: 0 },
         },
-      },
-    ]);
+      }
+    );
+
+    const communityTrending = await Collection.aggregate(pipeline);
 
     const communityCollections = communityTrending.map((c) => ({
       ...c,

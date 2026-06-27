@@ -47,9 +47,17 @@ export async function POST(req) {
 
     const body = await req.json().catch(() => null);
     const name = (body?.name || "").toString().trim();
-    const isPublic = Boolean(body?.isPublic);
     const description = (body?.description || "").toString().trim();
     const category = (body?.category || "Custom").toString().trim();
+
+    // Accept visibility enum; fall back to isPublic boolean for legacy callers
+    const VALID_VISIBILITIES = ["public", "unlisted", "private", "collaborative_private"];
+    let visibility = body?.visibility;
+    if (!VALID_VISIBILITIES.includes(visibility)) {
+      // Legacy callers that send isPublic: true/false
+      visibility = body?.isPublic ? "public" : "private";
+    }
+    const isPublic = visibility === "public";
 
     if (!name) {
       return NextResponse.json(
@@ -63,6 +71,7 @@ export async function POST(req) {
       name,
       description,
       category,
+      visibility,
       isPublic,
       movies: [],
     });
