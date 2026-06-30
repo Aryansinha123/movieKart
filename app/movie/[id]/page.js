@@ -97,6 +97,7 @@ import { parseWatchProviders } from "@/lib/ottProviders";
 import { Star, Check, Heart } from "lucide-react";
 import { getPersonUrl, getMovieUrl } from "@/utils/slugify";
 import Recommendations from "@/components/movie/Recommendations";
+import SeasonsList from "@/components/movie/SeasonsList";
 
 export const dynamic = "force-dynamic";
 
@@ -672,45 +673,7 @@ export default async function MoviePage({ params }) {
       {movie.media_type === "tv" && movie.seasons?.length > 0 && (
         <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
           <h2 className="text-2xl font-bold mb-6">Seasons</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {movie.seasons
-              .filter(s => s.season_number > 0)
-              .map(season => (
-                <div key={season.id} className="flex gap-4 rounded-xl border border-zinc-850 bg-zinc-900/30 p-4">
-                  <div className="relative w-20 h-28 shrink-0 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950">
-                    {season.poster_path ? (
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w185${season.poster_path}`}
-                        alt={season.name}
-                        fill
-                        sizes="80px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-zinc-700 bg-zinc-900 text-[10px] font-bold">
-                        No Poster
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-bold text-base text-white truncate">{season.name}</h3>
-                    <p className="text-xs text-amber-500 font-semibold mt-1">
-                      {season.episode_count} Episodes
-                    </p>
-                    {season.air_date && (
-                      <p className="text-[11px] text-zinc-500 mt-1">
-                        Aired: {new Date(season.air_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
-                      </p>
-                    )}
-                    {season.overview && (
-                      <p className="text-xs text-zinc-400 mt-2 line-clamp-2 leading-relaxed">
-                        {season.overview}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
+          <SeasonsList seasons={movie.seasons} seriesId={movie.id} />
         </section>
       )}
 
