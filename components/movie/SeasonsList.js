@@ -52,6 +52,26 @@ export default function SeasonsList({ seasons = [], seriesId }) {
 
   const activeSeason = seasons.find((s) => s.season_number === selectedSeasonNumber);
 
+  const getCombinedCast = () => {
+    if (!seasonDetails) return [];
+    const castList = [...(seasonDetails.credits?.cast || [])];
+    const seen = new Set(castList.map((c) => c.id));
+
+    if (seasonDetails.episodes) {
+      for (const ep of seasonDetails.episodes) {
+        if (ep.guest_stars) {
+          for (const gs of ep.guest_stars) {
+            if (!seen.has(gs.id)) {
+              seen.add(gs.id);
+              castList.push(gs);
+            }
+          }
+        }
+      }
+    }
+    return castList;
+  };
+
   return (
     <div className="space-y-8">
       {/* Seasons Grid */}
@@ -191,13 +211,13 @@ export default function SeasonsList({ seasons = [], seriesId }) {
           )}
 
           {/* Season Cast */}
-          {seasonDetails && seasonDetails.credits && seasonDetails.credits.cast && seasonDetails.credits.cast.length > 0 && (
+          {seasonDetails && getCombinedCast().length > 0 && (
             <div className="space-y-4">
               <h4 className="text-lg font-bold text-zinc-300 uppercase tracking-widest text-xs border-b border-zinc-900/60 pb-3">
-                Season Cast
+                Season Cast & Contestants
               </h4>
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
-                {seasonDetails.credits.cast.slice(0, 12).map((p) => (
+                {getCombinedCast().slice(0, 50).map((p) => (
                   <Link
                     key={p.credit_id || p.id}
                     href={getPersonUrl(p.id, p.name)}
