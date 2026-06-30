@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { getImagePath } from "@/utils/imagePath";
 import { X, Calendar, Star, ChevronDown, ChevronUp } from "lucide-react";
+import Link from "next/link";
+import { getPersonUrl } from "@/utils/slugify";
 
 export default function SeasonsList({ seasons = [], seriesId }) {
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState(null);
@@ -185,6 +187,48 @@ export default function SeasonsList({ seasons = [], seriesId }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Season Cast */}
+          {seasonDetails && seasonDetails.credits && seasonDetails.credits.cast && seasonDetails.credits.cast.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-lg font-bold text-zinc-300 uppercase tracking-widest text-xs border-b border-zinc-900/60 pb-3">
+                Season Cast
+              </h4>
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+                {seasonDetails.credits.cast.slice(0, 12).map((p) => (
+                  <Link
+                    key={p.credit_id || p.id}
+                    href={getPersonUrl(p.id, p.name)}
+                    className="w-28 shrink-0 rounded-xl border border-zinc-900 bg-zinc-900/20 overflow-hidden hover:border-cyan-500/50 transition-all group flex flex-col"
+                  >
+                    <div className="relative w-full aspect-[3/4] bg-zinc-900">
+                      {p.profile_path ? (
+                        <Image
+                          src={getImagePath(p.profile_path)}
+                          alt={p.name}
+                          fill
+                          sizes="112px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-zinc-700 text-xs">
+                          No Image
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2 flex-1 min-w-0 flex flex-col justify-center bg-zinc-950/40">
+                      <p className="font-semibold text-xs text-white truncate group-hover:text-cyan-400 transition-colors">
+                        {p.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                        {p.character}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
 

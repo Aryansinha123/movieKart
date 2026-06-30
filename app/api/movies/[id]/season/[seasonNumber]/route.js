@@ -46,7 +46,7 @@ export async function GET(req, context) {
     }
 
     const response = await fetchWithRetry(
-      `https://api.themoviedb.org/3/tv/${realId}/season/${seasonNumber}`,
+      `https://api.themoviedb.org/3/tv/${realId}/season/${seasonNumber}?append_to_response=credits`,
       {
         headers: {
           Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
