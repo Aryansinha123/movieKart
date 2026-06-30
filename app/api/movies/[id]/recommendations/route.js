@@ -125,7 +125,9 @@ export async function GET(req, context) {
 
     const addOrUpdateCandidate = (movie, updates = {}) => {
       if (!movie || !movie.id) return;
-      const targetId = Number(movie.id);
+      const mapped = mapTmdbResult(movie);
+      if (!mapped) return;
+      const targetId = Number(mapped.id);
       const existing = candidates.get(targetId);
 
       if (existing) {
@@ -139,7 +141,7 @@ export async function GET(req, context) {
         }
       } else {
         candidates.set(targetId, {
-          ...mapTmdbResult(movie),
+          ...mapped,
           collectionMatch: updates.collectionMatch || 0,
           directorMatch: updates.directorMatch || 0,
           castWeights: updates.castWeight ? [updates.castWeight] : [],

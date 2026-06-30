@@ -5,6 +5,7 @@ import { MapPin, Cake, User, Film } from "lucide-react";
 import { getPersonUrl } from "@/utils/slugify";
 import PersonFilmography from "@/components/profile/PersonFilmography";
 import FavoriteActorButton from "@/components/people/FavoriteActorButton";
+import { mapTmdbResult } from "@/lib/tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -189,12 +190,12 @@ export default async function PersonPage({ params }) {
 
   // Get directed movies (crew credits with job === "Director")
   const directedMovies = uniqueCredits(
-    credits?.crew?.filter(m => m.job === "Director" && m.poster_path) || []
+    (credits?.crew?.filter(m => m.job === "Director" && m.poster_path) || []).map(mapTmdbResult).filter(Boolean)
   );
 
   // Get acting roles (cast credits)
   const actingMovies = uniqueCredits(
-    credits?.cast?.filter(m => m.poster_path) || []
+    (credits?.cast?.filter(m => m.poster_path) || []).map(mapTmdbResult).filter(Boolean)
   );
 
   const personJsonLd = {

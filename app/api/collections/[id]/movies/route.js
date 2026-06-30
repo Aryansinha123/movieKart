@@ -10,12 +10,15 @@ import Notification from "@/models/Notification";
 
 async function getMovieTitle(movieId) {
   try {
+    const isTv = movieId < 0;
+    const realId = Math.abs(movieId);
+    const path = isTv ? `/tv/${realId}` : `/movie/${realId}`;
     const tmdbRes = await fetch(
-      `https://api.themoviedb.org/3/movie/${movieId}?api_key=${process.env.TMDB_API_KEY}`
+      `https://api.themoviedb.org/3${path}?api_key=${process.env.TMDB_API_KEY}`
     );
     if (tmdbRes.ok) {
       const tmdbData = await tmdbRes.json();
-      return tmdbData.title || `Movie #${movieId}`;
+      return tmdbData.title || tmdbData.name || `Movie #${movieId}`;
     }
   } catch (e) {
     // Ignore

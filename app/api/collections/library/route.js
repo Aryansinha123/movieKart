@@ -41,8 +41,12 @@ export async function GET(req) {
     for (const c of myCollections) {
       if (!c.imageUrl && c.movies?.length > 0) {
         try {
+          const firstMovieId = c.movies[0];
+          const isTv = firstMovieId < 0;
+          const realId = Math.abs(firstMovieId);
+          const path = isTv ? `/tv/${realId}` : `/movie/${realId}`;
           const tmdbRes = await fetch(
-            `https://api.themoviedb.org/3/movie/${c.movies[0]}?api_key=${process.env.TMDB_API_KEY}`
+            `https://api.themoviedb.org/3${path}?api_key=${process.env.TMDB_API_KEY}`
           );
           if (tmdbRes.ok) {
             const tmdbData = await tmdbRes.json();

@@ -42,12 +42,14 @@ export default function CollectionSearchBar({ onAddMovie, existingMovieIds = [],
       }
     }
 
-    // If query is a TMDB ID (numeric)
-    if (/^\d+$/.test(query.trim())) {
+    // If query is a TMDB ID (numeric, optionally negative)
+    if (/^-?\d+$/.test(query.trim())) {
+      const parsedId = Number(query.trim());
+      const isTv = parsedId < 0;
       setResults([
         {
-          id: Number(query.trim()),
-          title: `Movie with TMDB ID: ${query.trim()}`,
+          id: parsedId,
+          title: `${isTv ? "TV Show" : "Movie"} with TMDB ID: ${Math.abs(parsedId)}`,
           isTmdbIdInput: true,
           release_date: "Custom ID Search",
           vote_average: 0
