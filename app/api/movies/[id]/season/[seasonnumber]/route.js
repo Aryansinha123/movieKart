@@ -32,7 +32,9 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
 export async function GET(req, context) {
   try {
     const params = await context.params;
-    const { id, seasonNumber } = params;
+    const id = params.id;
+    const seasonNumber = params.seasonNumber || params.seasonnumber;
+    console.log("[SeasonRoute] GET called with id:", id, "seasonNumber:", seasonNumber);
 
     const numericId = parseInt(id, 10);
     // TV show ID in our system is represented as a negative number

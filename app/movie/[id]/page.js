@@ -606,9 +606,13 @@ export default async function MoviePage({ params }) {
             Videos <span className="text-zinc-500 text-sm font-normal">({videosRes.results.length})</span>
           </h2>
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {videosRes.results
+            {[...videosRes.results]
               .filter(v => v.site === "YouTube")
-              .slice(0, 4)
+              .sort((a, b) => {
+                const aIsTrailer = a.type === "Trailer" ? 1 : 0;
+                const bIsTrailer = b.type === "Trailer" ? 1 : 0;
+                return bIsTrailer - aIsTrailer;
+              })
               .map((video) => (
                 <div key={video.id} className="space-y-3">
                   <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">

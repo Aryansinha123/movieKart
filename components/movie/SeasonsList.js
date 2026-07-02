@@ -36,6 +36,9 @@ export default function SeasonsList({ seasons = [], seriesId }) {
 
     try {
       const res = await fetch(`/api/movies/${seriesId}/season/${seasonNumber}`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
       const data = await res.json();
       if (data && data.success !== false) {
         setSeasonDetails(data);
