@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import ReactDOM from "react-dom";
 import { BookmarkPlus, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -241,7 +241,7 @@ export default function CollectionPicker({ movieId, className, children }) {
         )}
       </button>
 
-      {mounted && typeof document !== "undefined" ? createPortal(modalContent, document.body) : null}
+      {mounted && typeof document !== "undefined" ? ReactDOM.createPortal(modalContent, document.body) : null}
     </>
   );
 }
