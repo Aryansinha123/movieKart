@@ -29,7 +29,7 @@ import {
   MessageSquare,
   AlertCircle,
 } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import CollectionCoverBanner from "@/components/collection/CollectionCoverBanner";
 import WatchNowButton from "@/components/collection/WatchNowButton";
 import DraggableMovieList from "@/components/collection/DraggableMovieList";

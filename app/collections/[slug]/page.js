@@ -14,7 +14,7 @@ import {
   ListOrdered,
   ImageIcon,
 } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import SaveCuratedButton from "@/components/collection/SaveCuratedButton";
 import CollectionCoverBanner from "@/components/collection/CollectionCoverBanner";
 import WatchNowButton from "@/components/collection/WatchNowButton";

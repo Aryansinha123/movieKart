@@ -28,7 +28,7 @@ import MovieCard from "@/components/movie/MovieCard";
 import NewReleases from "@/components/movie/NewReleases";
 import UpcomingMovies from "@/components/movie/UpcomingMovies";
 import MoodDiscoverySection from "@/components/home/MoodDiscoverySection";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { getMovieUrl } from "@/utils/slugify";
 import { useUserMovies } from "@/components/providers/UserProvider";
 

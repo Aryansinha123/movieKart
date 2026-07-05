@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Bookmark, Check, ListPlus, Eye, Trash2, Heart, Calendar, EyeOff } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 import { getImagePath } from "@/utils/imagePath";
 import WatchlistButton from "./WatchListButton";

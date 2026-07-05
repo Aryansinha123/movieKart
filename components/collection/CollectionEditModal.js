@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { COLLECTION_CATEGORIES } from "@/lib/collectionConstants";
 import CollectionBannerEditor from "./CollectionBannerEditor";
 

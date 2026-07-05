@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 function getToken() {
   if (typeof window === "undefined") return "";

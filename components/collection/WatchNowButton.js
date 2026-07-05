@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Play, CheckCircle2, RotateCcw } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { getMovieUrl } from "@/utils/slugify";
 
 function getToken() {

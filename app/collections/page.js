@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Search, Sparkles, TrendingUp, Filter, Plus, Users, Play } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { CuratedCollectionRow } from "@/components/collection/CuratedCollectionCard";
 import CuratedCollectionCard from "@/components/collection/CuratedCollectionCard";
 import { CollectionCardRow } from "@/components/collection/UserCollectionCard";
