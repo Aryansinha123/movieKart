@@ -86,13 +86,17 @@ export async function PUT(req) {
     const baseItems = curated?.items || [];
     const validIds = (movies || []).map(Number).filter((n) => Number.isFinite(n));
 
-    const save = await UserCuratedCollection.findOne({
+    let save = await UserCuratedCollection.findOne({
       userId: userData.id,
       curatedCollectionId: collectionId,
     });
 
     if (!save) {
-      return NextResponse.json({ success: false, message: "Collection not saved." }, { status: 404 });
+      save = new UserCuratedCollection({
+        userId: userData.id,
+        curatedCollectionId: collectionId,
+        personalItems: [...baseItems],
+      });
     }
 
     const currentItems =
@@ -131,13 +135,17 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 });
     }
 
-    const save = await UserCuratedCollection.findOne({
+    let save = await UserCuratedCollection.findOne({
       userId: userData.id,
       curatedCollectionId: curated._id,
     });
 
     if (!save) {
-      return NextResponse.json({ success: false, message: "Collection not saved." }, { status: 404 });
+      save = new UserCuratedCollection({
+        userId: userData.id,
+        curatedCollectionId: curated._id,
+        personalItems: [...(curated.items || [])],
+      });
     }
 
     let items =

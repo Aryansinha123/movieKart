@@ -70,9 +70,13 @@ export async function PUT(req) {
       return NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 });
     }
 
-    const save = await SavedCollection.findOne({ userId: userData.id, collectionId });
+    let save = await SavedCollection.findOne({ userId: userData.id, collectionId });
     if (!save) {
-      return NextResponse.json({ success: false, message: "Collection not saved." }, { status: 404 });
+      save = new SavedCollection({
+        userId: userData.id,
+        collectionId,
+        personalItems: [...(col.movies || [])],
+      });
     }
 
     const currentItems =
@@ -111,9 +115,13 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 });
     }
 
-    const save = await SavedCollection.findOne({ userId: userData.id, collectionId });
+    let save = await SavedCollection.findOne({ userId: userData.id, collectionId });
     if (!save) {
-      return NextResponse.json({ success: false, message: "Collection not saved." }, { status: 404 });
+      save = new SavedCollection({
+        userId: userData.id,
+        collectionId,
+        personalItems: [...(col.movies || [])],
+      });
     }
 
     let items =
