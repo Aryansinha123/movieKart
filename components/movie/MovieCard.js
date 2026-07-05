@@ -212,7 +212,7 @@ export default function MovieCard({
 
         {/* Hover Actions */}
         {movie.media_type !== "person" && (
-          <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 z-20">
+          <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 translate-x-0 md:opacity-0 md:translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 transition-all duration-300 z-20">
             <button
               onClick={handleNotInterested}
               className="p-2.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-500/50 hover:bg-zinc-800 transition-all shadow-xl backdrop-blur-md"
