@@ -55,8 +55,8 @@ export async function POST(req) {
       }
 
       // Check if already collaborator
-      const alreadyCollab = col.collaborators.some(
-        (c) => c.userId.toString() === targetUser._id.toString()
+      const alreadyCollab = (col.collaborators || []).some(
+        (c) => c?.userId?.toString() === targetUser._id.toString()
       );
       if (alreadyCollab) {
         return NextResponse.json({ success: false, message: "User is already a collaborator." }, { status: 400 });
@@ -151,8 +151,8 @@ export async function POST(req) {
         return NextResponse.json({ success: false, message: "Invalid targetUserId." }, { status: 400 });
       }
 
-      col.collaborators = col.collaborators.filter(
-        (c) => c.userId.toString() !== targetUserId
+      col.collaborators = (col.collaborators || []).filter(
+        (c) => c?.userId?.toString() !== targetUserId
       );
       await col.save();
 
@@ -197,7 +197,7 @@ export async function POST(req) {
         return NextResponse.json({ success: false, message: "Invalid targetUserId." }, { status: 400 });
       }
 
-      const isCollab = col.collaborators.some((c) => c.userId.toString() === targetUserId);
+      const isCollab = (col.collaborators || []).some((c) => c?.userId?.toString() === targetUserId);
       if (!isCollab) {
         return NextResponse.json({ success: false, message: "Ownership can only be transferred to a current collaborator." }, { status: 400 });
       }
@@ -205,7 +205,7 @@ export async function POST(req) {
       // Transfer ownership
       col.ownerId = targetUserId;
       // Remove the new owner from collaborators list
-      col.collaborators = col.collaborators.filter((c) => c.userId.toString() !== targetUserId);
+      col.collaborators = (col.collaborators || []).filter((c) => c?.userId?.toString() !== targetUserId);
       // Add the old owner to collaborators list (optional, but standard, let's keep them as a collaborator so they don't lose edit rights)
       col.collaborators.push({ userId: userData.id, role: "collaborator", invitedAt: new Date() });
       await col.save();

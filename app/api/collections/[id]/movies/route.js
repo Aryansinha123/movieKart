@@ -32,9 +32,9 @@ async function verifyAccessAndCheckConflict(userData, id, body) {
     return { errorResponse: NextResponse.json({ success: false, message: "Collection not found." }, { status: 404 }) };
   }
 
-  const isOwner = collection.ownerId.toString() === userData.id;
-  const isCollaborator = collection.collaborators?.some(
-    (c) => c.userId.toString() === userData.id
+  const isOwner = collection.ownerId?.toString() === userData.id;
+  const isCollaborator = (collection.collaborators || []).some(
+    (c) => c?.userId?.toString() === userData.id
   );
 
   if (!isOwner && !isCollaborator) {
@@ -65,11 +65,11 @@ async function verifyAccessAndCheckConflict(userData, id, body) {
 
 async function sendCollaboratorNotifications(collection, actorId, actorUsername, messageText) {
   const notifyUserIds = [];
-  if (collection.ownerId.toString() !== actorId) {
+  if (collection.ownerId?.toString() !== actorId) {
     notifyUserIds.push(collection.ownerId);
   }
-  collection.collaborators.forEach((c) => {
-    if (c.userId.toString() !== actorId) {
+  (collection.collaborators || []).forEach((c) => {
+    if (c?.userId && c.userId.toString() !== actorId) {
       notifyUserIds.push(c.userId);
     }
   });

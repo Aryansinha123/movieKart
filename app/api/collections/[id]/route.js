@@ -325,11 +325,11 @@ export async function PATCH(req, context) {
 
     // Notify other collaborators/owner about editing
     const notifyUserIds = [];
-    if (existing.ownerId.toString() !== userData.id) {
+    if (existing.ownerId?.toString() !== userData.id) {
       notifyUserIds.push(existing.ownerId);
     }
-    existing.collaborators.forEach((c) => {
-      if (c.userId.toString() !== userData.id) {
+    (existing.collaborators || []).forEach((c) => {
+      if (c?.userId && c.userId.toString() !== userData.id) {
         notifyUserIds.push(c.userId);
       }
     });
