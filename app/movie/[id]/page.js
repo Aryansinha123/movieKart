@@ -98,6 +98,7 @@ import { Star, Check, Heart } from "lucide-react";
 import { getPersonUrl, getMovieUrl } from "@/utils/slugify";
 import Recommendations from "@/components/movie/Recommendations";
 import SeasonsList from "@/components/movie/SeasonsList";
+import ExpandableOverview from "@/components/movie/ExpandableOverview";
 
 export const dynamic = "force-dynamic";
 
@@ -457,9 +458,7 @@ export default async function MoviePage({ params }) {
                 </p>
               )}
 
-              <p className="text-zinc-300 mt-4 text-sm md:text-base lg:text-lg max-w-2xl line-clamp-3 md:line-clamp-none">
-                {movie.overview}
-              </p>
+              <ExpandableOverview overview={movie.overview} />
 
               {movie.media_type === "tv" && movie.created_by?.length > 0 ? (
                 <div className="mt-4 text-sm md:text-base">
