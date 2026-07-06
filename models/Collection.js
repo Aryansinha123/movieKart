@@ -107,7 +107,7 @@ const CollectionSchema = new mongoose.Schema(
 CollectionSchema.index({ ownerId: 1, name: 1 }, { unique: false });
 CollectionSchema.index({ shareToken: 1 }, { unique: true, sparse: true });
 
-CollectionSchema.pre("save", async function (next) {
+CollectionSchema.pre("save", async function () {
   // Sync isPublic with visibility for compatibility
   this.isPublic = this.visibility === "public";
 
@@ -134,7 +134,6 @@ CollectionSchema.pre("save", async function (next) {
       counter++;
     }
   }
-  next();
 });
 
 export default mongoose.models.Collection || mongoose.model("Collection", CollectionSchema);
