@@ -1,6 +1,6 @@
 const https = require('https');
 
-const TMDB_API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxMDYzZTVmNjY2OTYxY2JiYmNkNDE2MGEzOWI5MjRjZCIsIm5iZiI6MTc3ODQ2NTgzMC4xNTYsInN1YiI6IjZhMDEzYzI2NWQzZGFkNTJmYWE4ZGVjZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.7d_YDjnugQtjaggkGws0SLVcpypzPJAa11zJFmC_8NY";
+const TMDB_API_KEY = process.env.TMDB_API_KEY || '';
 const BASE_URL = "https://api.themoviedb.org/3";
 
 function getJson(url) {
