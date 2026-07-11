@@ -1,0 +1,605 @@
+You are an expert Senior SEO Engineer, Next.js 15 developer, and Technical SEO specialist.
+
+Your task is to transform MovieKart into a search-engine optimized movie discovery platform that ranks on Google for both the brand name and individual movie names.
+
+The objective is:
+
+1. If someone searches "MovieKart" on Google:
+   - The homepage should appear on the first page.
+   - Google should display:
+     - MovieKart
+     - "Watch trailers, discover movies & TV shows."
+     - Sitelinks
+     - Search box
+     - Logo
+     - Proper favicon
+     - Social profiles
+     - Organization schema
+
+2. If someone searches:
+
+   Avengers Endgame
+   Interstellar
+   Iron Man
+   Lucifer
+   Stranger Things
+   Breaking Bad
+
+Google should index MovieKart pages such as
+
+moviekart.com/movie/avengers-endgame
+moviekart.com/movie/interstellar
+moviekart.com/movie/iron-man
+
+and those pages should appear in search results.
+
+----------------------------------------------------
+TECH STACK
+----------------------------------------------------
+
+Next.js 15 App Router
+
+TypeScript
+
+Tailwind
+
+Dynamic Routes
+
+Server Components
+
+TMDB API
+
+----------------------------------------------------
+IMPLEMENT COMPLETE SEO
+----------------------------------------------------
+
+Implement every modern SEO practice.
+
+=====================================
+1. Dynamic Metadata API
+=====================================
+
+Use generateMetadata() for every movie page.
+
+Generate
+
+Title
+
+Description
+
+Keywords
+
+Canonical URL
+
+OpenGraph
+
+Twitter Cards
+
+robots
+
+themeColor
+
+creator
+
+publisher
+
+authors
+
+Example:
+
+Title:
+Interstellar (2014) | MovieKart
+
+Description:
+Watch trailer, ratings, cast, overview, genres, runtime and recommendations for Interstellar on MovieKart.
+
+Keywords:
+Interstellar,
+Interstellar movie,
+Interstellar trailer,
+Interstellar cast,
+Interstellar review,
+MovieKart
+
+--------------------------------------
+
+=====================================
+2. Dynamic URLs
+=====================================
+
+Generate SEO-friendly slugs.
+
+Instead of
+
+/movie/603
+
+Use
+
+/movie/interstellar
+
+or
+
+/movie/interstellar-2014
+
+Handle duplicates.
+
+Redirect old IDs to slug URLs.
+
+=====================================
+3. Structured Data
+=====================================
+
+Generate JSON-LD.
+
+Homepage:
+
+Organization
+
+Website
+
+SearchAction
+
+Movie Page:
+
+Movie
+
+AggregateRating
+
+Review
+
+Person
+
+Actor
+
+Director
+
+Breadcrumb
+
+CollectionPage
+
+TV pages:
+
+TVSeries schema
+
+Episode schema
+
+Season schema
+
+=====================================
+4. XML Sitemap
+=====================================
+
+Automatically generate sitemap.xml.
+
+Include
+
+Homepage
+
+Movies
+
+TV Shows
+
+Trending
+
+Popular
+
+Upcoming
+
+Collections
+
+Genres
+
+New pages
+
+Dynamic routes
+
+Use lastModified.
+
+=====================================
+5. robots.txt
+=====================================
+
+Allow Google.
+
+Disallow unnecessary API routes.
+
+Reference sitemap.
+
+=====================================
+6. OpenGraph Images
+=====================================
+
+Generate dynamic OG images.
+
+Movie poster
+
+Movie title
+
+MovieKart branding
+
+Runtime
+
+Release year
+
+Rating
+
+=====================================
+7. Meta Tags
+=====================================
+
+Every page should have
+
+Title
+
+Description
+
+Canonical
+
+Keywords
+
+Language
+
+Viewport
+
+Charset
+
+Author
+
+Publisher
+
+Theme color
+
+OG tags
+
+Twitter tags
+
+Robots
+
+=====================================
+8. Internal Linking
+=====================================
+
+Movie pages should automatically link to
+
+Actors
+
+Director
+
+Genres
+
+Collections
+
+Recommendations
+
+Similar movies
+
+Popular movies
+
+Trending
+
+Latest releases
+
+This improves crawl depth.
+
+=====================================
+9. Breadcrumbs
+=====================================
+
+Home
+
+Movies
+
+Interstellar
+
+Generate Breadcrumb Schema.
+
+=====================================
+10. Dynamic Canonical URLs
+=====================================
+
+Every movie page must have
+
+<link rel="canonical">
+
+Avoid duplicate content.
+
+=====================================
+11. Fast Performance
+=====================================
+
+Use
+
+Server Components
+
+Image optimization
+
+Suspense
+
+Streaming
+
+Caching
+
+Incremental Static Regeneration
+
+Lazy loading
+
+Metadata caching
+
+Avoid duplicate TMDB requests.
+
+=====================================
+12. Indexability
+=====================================
+
+Noindex pages like
+
+404
+
+Search pages
+
+Admin
+
+Dashboard
+
+Profile
+
+Login
+
+Signup
+
+API routes
+
+Index only useful pages.
+
+=====================================
+13. Rich Snippets
+=====================================
+
+Enable Google Rich Results.
+
+Display
+
+Rating stars
+
+Movie year
+
+Runtime
+
+Genres
+
+Cast
+
+Director
+
+Poster
+
+=====================================
+14. Dynamic Static Generation
+=====================================
+
+Use generateStaticParams()
+
+Pre-render
+
+Trending movies
+
+Popular movies
+
+Top Rated
+
+Upcoming
+
+Popular TV Shows
+
+ISR for remaining pages.
+
+=====================================
+15. Search Box Schema
+=====================================
+
+Implement Website SearchAction.
+
+Google should display a search box under MovieKart.
+
+=====================================
+16. Favicon & Icons
+=====================================
+
+Generate
+
+favicon.ico
+
+apple-touch-icon
+
+android icons
+
+manifest.json
+
+theme color
+
+=====================================
+17. Brand SEO
+=====================================
+
+Homepage title:
+
+MovieKart | Watch Movies, TV Shows & Trailers
+
+Description:
+
+Discover thousands of movies and TV shows. Watch trailers, explore ratings, cast, reviews, recommendations, and trending entertainment only on MovieKart.
+
+Keywords:
+
+MovieKart,
+Movies,
+TV Shows,
+Trailers,
+Trending Movies,
+Watch Movies
+
+=====================================
+18. Content SEO
+=====================================
+
+Every movie page should include
+
+Overview
+
+Story summary
+
+Genres
+
+Runtime
+
+Release date
+
+Cast
+
+Director
+
+Production companies
+
+Recommendations
+
+FAQs
+
+"People also searched"
+
+This improves ranking.
+
+=====================================
+19. Google Search Console
+=====================================
+
+Prepare project for
+
+Google Search Console
+
+Bing Webmaster
+
+Generate verification metadata.
+
+=====================================
+20. Social Sharing
+=====================================
+
+Facebook
+
+Twitter
+
+Discord
+
+WhatsApp
+
+LinkedIn
+
+Telegram
+
+OpenGraph previews
+
+=====================================
+21. Automatic Metadata Generation
+=====================================
+
+Every new movie fetched from TMDB should automatically receive SEO metadata without manual coding.
+
+=====================================
+22. Accessibility
+=====================================
+
+Proper headings
+
+ARIA labels
+
+Alt text
+
+Semantic HTML
+
+=====================================
+23. Security
+=====================================
+
+Canonical enforcement
+
+HTTPS URLs
+
+Remove duplicate paths
+
+Prevent crawl traps
+
+=====================================
+24. Technical SEO Audit
+=====================================
+
+Fix
+
+Duplicate titles
+
+Duplicate descriptions
+
+Broken links
+
+Missing alt tags
+
+Slow loading
+
+Missing schema
+
+Missing canonical
+
+=====================================
+25. Final Deliverables
+=====================================
+
+Implement production-ready code for:
+
+✓ generateMetadata()
+
+✓ metadataBase
+
+✓ sitemap.ts
+
+✓ robots.ts
+
+✓ manifest.ts
+
+✓ OpenGraph image generation
+
+✓ JSON-LD schema
+
+✓ canonical URLs
+
+✓ dynamic slug routing
+
+✓ breadcrumbs
+
+✓ ISR
+
+✓ generateStaticParams()
+
+✓ SearchAction schema
+
+✓ Organization schema
+
+✓ Movie schema
+
+✓ TV schema
+
+✓ metadata optimization
+
+✓ internal linking
+
+✓ crawl optimization
+
+✓ indexing optimization
+
+✓ Google Rich Results compatibility
+
+✓ Lighthouse SEO score 100
+
+✓ Core Web Vitals optimization
+
+✓ Fully production-ready Next.js SEO implementation.
+
+Do not leave TODOs or placeholders. Refactor the project where necessary to follow Next.js 15 SEO best practices while preserving existing functionality.

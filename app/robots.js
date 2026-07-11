@@ -5,7 +5,12 @@ export default function robots() {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: [
+          "/",
+          "/movie/",
+          "/collection/",
+          "/collections",
+        ],
         disallow: [
           "/api/",
           "/auth/",
@@ -14,7 +19,12 @@ export default function robots() {
           "/watchlist/",
           "/watched/",
           "/feed/",
-          "/collection/",
+          "/profile/",
+          "/login",
+          "/register",
+          "/search",
+          "/admin",
+          "/dashboard",
         ],
       },
     ],
