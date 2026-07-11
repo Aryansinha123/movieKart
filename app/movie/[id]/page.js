@@ -11,12 +11,13 @@ import ReviewsSection from "@/components/movie/ReviewsSection";
 import CollectionPicker from "@/components/collection/CollectionPicker";
 import WhereToWatch from "@/components/movie/WhereToWatch";
 import { parseWatchProviders } from "@/lib/ottProviders";
-import { Star, Check, Heart } from "lucide-react";
+import { Star, Check, Heart, ArrowDown } from "lucide-react";
 import { getPersonUrl, getMovieUrl, slugify, parseMovieSlug } from "@/utils/slugify";
 import Recommendations from "@/components/movie/Recommendations";
 import SeasonsList from "@/components/movie/SeasonsList";
 import ExpandableOverview from "@/components/movie/ExpandableOverview";
 import Breadcrumbs from "@/components/movie/Breadcrumbs";
+import ScrollToCastButton from "@/components/movie/ScrollToCastButton";
 import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
 import JsonLd from "@/components/JsonLd";
 
@@ -297,6 +298,16 @@ export default async function MoviePage({ params }) {
   const watchProvidersRes = await getWatchProviders(movie.id);
   const videosRes = await getVideos(movie.id);
 
+  const youtubeVideos = Array.isArray(videosRes?.results)
+    ? videosRes.results
+        .filter(v => v.site === "YouTube")
+        .sort((a, b) => {
+          const aIsTrailer = a.type === "Trailer" ? 1 : 0;
+          const bIsTrailer = b.type === "Trailer" ? 1 : 0;
+          return bIsTrailer - aIsTrailer;
+        })
+    : [];
+
   const { providers, watchLink } = parseWatchProviders(watchProvidersRes, movie.title);
   const director = credits?.crew?.find((c) => c.job === "Director");
   const topActors = credits?.cast?.slice(0, 12) || [];
@@ -392,7 +403,7 @@ export default async function MoviePage({ params }) {
       <JsonLd data={mainSchema} />
       <JsonLd data={breadcrumbSchema} />
 
-      <Breadcrumbs items={breadcrumbsList} />
+      {/* <Breadcrumbs items={breadcrumbsList} /> */}
 
       {/* Backdrop Banner */}
       <div className="relative h-[35vh] sm:h-[50vh] md:h-[60vh] lg:h-[65vh] w-full overflow-hidden">
@@ -559,20 +570,27 @@ export default async function MoviePage({ params }) {
       <WhereToWatch providers={providers} watchLink={watchLink} variant="mobile" />
 
       {/* Videos Section */}
-      {Array.isArray(videosRes?.results) && videosRes.results.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 md:px-10 mt-10">
-          <h2 className="text-2xl font-bold flex items-center gap-3">
-            Videos <span className="text-zinc-500 text-sm font-normal">({videosRes.results.length})</span>
-          </h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...videosRes.results]
-              .filter(v => v.site === "YouTube")
-              .sort((a, b) => {
-                const aIsTrailer = a.type === "Trailer" ? 1 : 0;
-                const bIsTrailer = b.type === "Trailer" ? 1 : 0;
-                return bIsTrailer - aIsTrailer;
-              })
-              .map((video) => (
+      {youtubeVideos.length > 0 && (
+        <section id="videos-section" className="max-w-6xl mx-auto px-6 md:px-10 mt-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              Videos <span className="text-zinc-500 text-sm font-normal">({youtubeVideos.length})</span>
+            </h2>
+            {youtubeVideos.length > 7 && (
+              <>
+                <a
+                  href="#cast"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 transition-all text-xs font-bold text-white border border-zinc-700 shadow-lg shadow-black/20 self-start sm:self-auto"
+                >
+                  <ArrowDown size={14} className="animate-bounce" />
+                  Scroll to Cast
+                </a>
+                <ScrollToCastButton />
+              </>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {youtubeVideos.map((video) => (
                 <div key={video.id} className="space-y-3">
                   <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
                     <iframe
@@ -600,7 +618,7 @@ export default async function MoviePage({ params }) {
 
       {/* Cast Section with structured profile links */}
       {topActors.length > 0 ? (
-        <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
+        <section id="cast" className="max-w-6xl mx-auto px-6 md:px-10 pt-10 scroll-mt-20">
           <h2 className="text-2xl font-bold">Cast</h2>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {topActors.map((p) => (
