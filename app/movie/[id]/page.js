@@ -20,6 +20,7 @@ import Breadcrumbs from "@/components/movie/Breadcrumbs";
 import ScrollToCastButton from "@/components/movie/ScrollToCastButton";
 import { SITE_URL, SITE_NAME } from "@/lib/seo.config";
 import JsonLd from "@/components/JsonLd";
+import GallerySection from "@/components/movie/GallerySection";
 
 // ISR: Revalidate pages every hour
 export const revalidate = 3600;
@@ -660,22 +661,7 @@ export default async function MoviePage({ params }) {
 
       {/* Gallery/Screenshots */}
       {movie.images?.backdrops?.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 md:px-10 pt-10">
-          <h2 className="text-2xl font-bold mb-6">Gallery</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {movie.images.backdrops.slice(0, 6).map((img, idx) => (
-              <div key={idx} className="aspect-video relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 group">
-                <Image
-                  src={`https://image.tmdb.org/t/p/w780${img.file_path}`}
-                  alt={`${movie.title} Backdrop Screenshot ${idx + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            ))}
-          </div>
-        </section>
+        <GallerySection backdrops={movie.images.backdrops} movieTitle={movie.title} />
       )}
 
       {/* Crawl depth footer panel for internal links */}
