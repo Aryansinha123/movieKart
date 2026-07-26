@@ -50,8 +50,8 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
   throw lastError;
 }
 
-// Fetch raw details directly by numeric TMDB ID
-async function fetchDetailsDirectly(id) {
+// Fetch raw details directly by numeric TMDB ID with React cache deduplication
+const fetchDetailsDirectly = cache(async (id) => {
   if (!process.env.TMDB_API_KEY) return null;
   try {
     const numericId = parseInt(id, 10);
@@ -95,7 +95,9 @@ async function fetchDetailsDirectly(id) {
     console.error(`Failed to fetch movie details by ID ${id}:`, err);
     return null;
   }
-}
+});
+
+
 
 // Resolve slug or numeric ID to TMDB movie/TV metadata
 const getMovieOrTv = cache(async (rawId) => {
@@ -171,11 +173,11 @@ export async function generateStaticParams() {
     const [moviesRes, tvRes] = await Promise.all([
       fetchWithRetry(`https://api.themoviedb.org/3/trending/movie/week`, {
         headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}`, accept: "application/json" },
-        cache: "no-store",
+        next: { revalidate: 86400 },
       }),
       fetchWithRetry(`https://api.themoviedb.org/3/tv/popular`, {
         headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}`, accept: "application/json" },
-        cache: "no-store",
+        next: { revalidate: 86400 },
       }),
     ]);
 

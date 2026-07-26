@@ -22,6 +22,8 @@ async function fetchWithRetry(url, init, { retries = 2, timeoutMs = 8000 } = {})
   throw lastError;
 }
 
+export const revalidate = 86400;
+
 export default async function sitemap() {
   const now = new Date().toISOString();
   const routes = [

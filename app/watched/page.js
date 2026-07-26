@@ -52,15 +52,13 @@ export default function WatchedPage() {
           return;
         }
 
-        const movieResults = await Promise.all(
-          ids.map(async (id) => {
-            const res = await fetch(`/api/movies/${id}`, { cache: "no-store" });
-            if (!res.ok) return null;
-            return await res.json().catch(() => null);
-          })
-        );
-
-        const normalized = movieResults.filter(Boolean);
+        const batchRes = await fetch("/api/movies/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        const batchData = await batchRes.json().catch(() => null);
+        const normalized = batchData?.movies || [];
         if (!cancelled) setMovies(normalized);
       } catch (e) {
         if (!cancelled) setError(e?.message || "Something went wrong.");

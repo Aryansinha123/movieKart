@@ -51,24 +51,34 @@ export default function FeedPage() {
       const missing = ids.filter((id) => movieMap[id] === undefined);
       if (missing.length === 0) return;
 
-      const results = await Promise.all(
-        missing.map(async (id) => {
-          try {
-            const res = await fetch(`/api/movies/${id}`, { cache: "no-store" });
-            if (!res.ok) return [id, null];
-            const data = await res.json().catch(() => null);
-            return [id, data || null];
-          } catch {
-            return [id, null];
-          }
-        })
-      );
+      try {
+        const batchRes = await fetch("/api/movies/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: missing }),
+        });
+        const batchData = await batchRes.json().catch(() => null);
+        const fetchedMovies = batchData?.movies || [];
 
-      setMovieMap((prev) => {
-        const next = { ...prev };
-        for (const [id, movie] of results) next[id] = movie;
-        return next;
-      });
+        setMovieMap((prev) => {
+          const next = { ...prev };
+          missing.forEach((id) => {
+            next[id] = null;
+          });
+          fetchedMovies.forEach((m) => {
+            if (m && m.id) next[m.id] = m;
+          });
+          return next;
+        });
+      } catch {
+        setMovieMap((prev) => {
+          const next = { ...prev };
+          missing.forEach((id) => {
+            next[id] = null;
+          });
+          return next;
+        });
+      }
     }
 
     hydrateMovies();
