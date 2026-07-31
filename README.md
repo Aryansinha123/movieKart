@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🎬 MovieKart
 
@@ -222,24 +222,24 @@ moviekart/
 ```mermaid
 flowchart TD
     A([User Visits MovieKart]) --> B{Session Exists?}
-    B -- Yes --> C[Load User Context\nfrom NextAuth session]
+    B -- Yes --> C["Load User Context from NextAuth session"]
     B -- No --> D[Public Browse Mode]
 
     D --> E{User Action Requires Auth?}
     E -- No --> F[Continue Browsing]
-    E -- Yes --> G[Redirect to /login]
+    E -- Yes --> G["Redirect to /login"]
 
     G --> H[Login Page]
     H --> I{Has Account?}
-    I -- No --> J[/register]
-    J --> K[Submit: username, email, password]
-    K --> L[POST /api/auth/register]
+    I -- No --> J["/register"]
+    J --> K["Submit: username, email, password"]
+    K --> L["POST /api/auth/register"]
     L --> M[bcrypt hash password]
     M --> N[Save User to MongoDB]
     N --> O[Return JWT Token]
 
-    I -- Yes --> P[Submit: email + password]
-    P --> Q[POST /api/auth/login]
+    I -- Yes --> P["Submit: email + password"]
+    P --> Q["POST /api/auth/login"]
     Q --> R[Verify bcrypt hash]
     R --> S{Valid?}
     S -- No --> T[401 Error Response]
@@ -247,7 +247,7 @@ flowchart TD
 
     O --> V[Client stores session]
     U --> V
-    V --> W[UserProvider loads /api/me]
+    V --> W["UserProvider loads /api/me"]
     W --> C
     C --> X[Authenticated Experience]
 ```
@@ -260,39 +260,39 @@ flowchart TD
 flowchart TD
     A([Authenticated User]) --> B[Home Dashboard]
 
-    B --> C[/api/home-dashboard]
-    C --> D[TMDB: Trending Week]
-    C --> E[TMDB: Popular Movies]
-    C --> F[TMDB: Upcoming]
-    C --> G[TMDB: Popular TV Shows]
+    B --> C["/api/home-dashboard"]
+    C --> D["TMDB: Trending Week"]
+    C --> E["TMDB: Popular Movies"]
+    C --> F["TMDB: Upcoming"]
+    C --> G["TMDB: Popular TV Shows"]
     C --> H[Curated Collections from DB]
 
     B --> I{User Has Watch History?}
 
     I -- No --> J[Show Trending and Popular]
-    I -- Yes --> K[POST /api/recommendations]
+    I -- Yes --> K["POST /api/recommendations"]
 
-    K --> L[Load User Profile\nwatchedMovies, favorites,\nfavoriteActors, preferredLanguages]
-    L --> M[Score Movies by:\nGenre affinity\nActor overlap\nLanguage match\nRelease era preference]
-    M --> N[Fetch TMDB Similar + Recommended\nfor seed movies]
+    K --> L["Load User Profile: watchedMovies, favorites, favoriteActors, preferredLanguages"]
+    L --> M["Score Movies by: Genre affinity, Actor overlap, Language match, Release era preference"]
+    M --> N["Fetch TMDB Similar + Recommended for seed movies"]
     N --> O[Deduplicate and rank results]
     O --> P[Return Personalized Feed]
 
-    B --> Q[Mood Discovery\n/api/mood]
-    Q --> R[User selects mood:\nEmotional, Dark, Comfort\nMind-Bending, Adventure]
-    R --> S[Map mood to TMDB genres + keywords]
+    B --> Q["/api/mood - Mood Discovery"]
+    Q --> R["User selects mood: Emotional, Dark, Comfort, Mind-Bending, Adventure"]
+    R --> S[Map mood to TMDB genres and keywords]
     S --> T[Fetch matching movies from TMDB]
     T --> U[Display mood-filtered results]
 
     B --> V[Search Bar]
-    V --> W[/api/movies/search?q=]
-    W --> X[TMDB /search/multi + /search/tv]
-    X --> Y[Deduplicated Results\nMovies + TV Shows + People]
+    V --> W["/api/movies/search"]
+    W --> X["TMDB: search/multi + search/tv"]
+    X --> Y["Deduplicated Results: Movies + TV Shows + People"]
 
-    P --> Z[Movie Detail /movie/:id]
+    P --> Z["Movie Detail /movie/:id"]
     U --> Z
     Y --> Z
-    Z --> AA[TMDB: fetchMovieDetails\nkeywords, credits appended]
+    Z --> AA["TMDB: fetchMovieDetails - keywords, credits appended"]
     AA --> BB[OTT Provider Links]
     AA --> CC[Cast and Director Profiles]
     AA --> DD[Similar Movies]
