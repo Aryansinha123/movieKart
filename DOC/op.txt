@@ -1,0 +1,227 @@
+You are a Senior Next.js Performance Engineer and Vercel Infrastructure Expert.
+
+Analyze my entire GitHub repository and optimize it specifically for Vercel resource usage, performance, scalability, and cost efficiency.
+
+Repository:
+https://github.com/Aryansinha123/movieKart
+
+Current problem:
+
+The application is exhausting Vercel resources.
+
+Current Usage:
+
+- ISR Writes: 1.8M / 200K
+- Edge Requests: 3.8M / 1M
+- Function Invocations: 1.4M / 1M
+- Fluid Active CPU: 11h 20m / 4h
+- Fast Origin Transfer: 30GB / 10GB
+
+The project is a Next.js App Router movie application that fetches movie data from external APIs (TMDB).
+
+I want you to perform a complete architecture and performance audit.
+
+------------------------------------------------
+
+Your tasks:
+
+1. Analyze the entire project structure.
+
+2. Explain how every page is rendered:
+   - Static
+   - Dynamic
+   - ISR
+   - SSR
+   - Client Component
+   - Server Component
+
+3. Find all unnecessary server executions.
+
+4. Find all unnecessary API calls.
+
+5. Detect duplicate API requests.
+
+6. Detect repeated fetch() calls.
+
+7. Check every fetch() and recommend:
+   - cache
+   - force-cache
+   - no-store
+   - revalidate
+   - unstable_cache
+   - React cache()
+
+8. Search for:
+
+- revalidatePath()
+- revalidateTag()
+- unstable_noStore()
+- dynamic = "force-dynamic"
+- cache: "no-store"
+
+Explain whether each usage is necessary.
+
+9. Check if API routes are being called from Server Components.
+
+If yes,
+recommend fetching the external API directly instead.
+
+10. Analyze middleware.
+
+Check whether middleware is running for every route.
+
+Suggest a better matcher configuration.
+
+11. Analyze image optimization.
+
+Check:
+
+- next/image
+- remotePatterns
+- image sizes
+- unnecessary transformations
+- lazy loading
+- priority images
+
+12. Check for unnecessary rerenders.
+
+Inspect:
+
+- useEffect
+- useState
+- Context
+- Suspense
+- Loading UI
+
+13. Analyze all server actions.
+
+Determine if they should instead be:
+
+- cached
+- client-side
+- static
+
+14. Analyze route handlers.
+
+Check for:
+
+- repeated database connections
+- repeated API calls
+- expensive computations
+
+15. Check metadata generation.
+
+See whether generateMetadata() is repeatedly calling APIs.
+
+If yes,
+recommend caching.
+
+16. Analyze generateStaticParams().
+
+Recommend pages that should become static.
+
+17. Analyze layouts.
+
+Ensure data isn't repeatedly fetched in nested layouts.
+
+18. Find components causing unnecessary hydration.
+
+19. Detect opportunities for:
+
+- React.memo
+- useMemo
+- useCallback
+
+20. Analyze bundle size.
+
+Find:
+
+- heavy packages
+- duplicate dependencies
+- large client bundles
+
+21. Analyze code splitting.
+
+Recommend:
+
+- dynamic imports
+- lazy loading
+- Suspense
+
+22. Analyze network usage.
+
+Explain why Origin Transfer is so high.
+
+Find:
+
+- oversized JSON
+- duplicate responses
+- unnecessary payloads
+
+23. Explain why ISR Writes are so high.
+
+Find exactly which routes or code are causing them.
+
+24. Explain why Function Invocations are so high.
+
+Identify every function responsible.
+
+25. Explain why Edge Requests are so high.
+
+Check middleware, edge runtime, and route configuration.
+
+26. Explain why Fluid CPU usage is so high.
+
+Identify expensive operations.
+
+27. Suggest architectural improvements.
+
+Examples:
+
+- Move fetching to layouts
+- Cache TMDB responses
+- Reduce server rendering
+- Use static pages where possible
+- Eliminate unnecessary API routes
+- Batch requests with Promise.all
+- Add response caching
+
+28. Produce an optimization checklist ranked by impact.
+
+Format:
+
+Critical
+High
+Medium
+Low
+
+29. For every optimization:
+
+Provide:
+
+- File name
+- Function
+- Current code
+- Optimized code
+- Why it improves performance
+- Estimated impact
+
+30. Estimate how much each optimization can reduce:
+
+- ISR Writes
+- Function Invocations
+- Edge Requests
+- CPU
+- Origin Transfer
+
+31. Identify anti-patterns and explain why they are problematic.
+
+32. Follow Next.js 15 and Vercel best practices.
+
+33. At the end, provide a prioritized roadmap:
+
+Phase 1 (Highest impact)
+Phase 2
+Phase 3
+
+Rank optimizations from easiest to hardest and estimate the overall reduction in Vercel resource usage if all recommendations are implemented.
