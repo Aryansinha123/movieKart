@@ -694,6 +694,7 @@ export default function HomeClient() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailedTaste, setDetailedTaste] = useState(null);
+  const [tasteLoading, setTasteLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const fetchRecommendations = useCallback(async () => {
@@ -720,8 +721,12 @@ export default function HomeClient() {
 
   const fetchTasteProfile = useCallback(async () => {
     const token = getToken();
-    if (!token || token === "null" || token === "undefined") return;
+    if (!token || token === "null" || token === "undefined") {
+      setTasteLoading(false);
+      return;
+    }
     try {
+      setTasteLoading(true);
       const res = await fetch("/api/taste-profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -731,6 +736,8 @@ export default function HomeClient() {
       }
     } catch (e) {
       console.error("Failed to fetch taste profile", e);
+    } finally {
+      setTasteLoading(false);
     }
   }, []);
 
@@ -837,148 +844,157 @@ export default function HomeClient() {
       </div>
 
       <div className="max-w-[1600px] w-full mx-auto px-6 pb-20">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 size={40} className="animate-spin text-purple-400 mb-4" />
-            <p className="text-zinc-500">Analyzing your taste profile...</p>
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            {activeTab === "moods" && (
-              <motion.div
-                key="moods"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mt-8"
-              >
-                <MoodDiscoverySection />
-              </motion.div>
-            )}
+        <AnimatePresence mode="wait">
+          {activeTab === "moods" && (
+            <motion.div
+              key="moods"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8"
+            >
+              <MoodDiscoverySection />
+            </motion.div>
+          )}
 
-            {activeTab === "recommendations" && (
-              <motion.div
-                key="recommendations"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-12 mt-8"
-              >
-                <div className="py-12 relative z-10">
-                  <SearchBar />
+          {activeTab === "recommendations" && (
+            <motion.div
+              key="recommendations"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-12 mt-8"
+            >
+              <div className="py-12 relative z-10">
+                <SearchBar />
+              </div>
+              
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 size={40} className="animate-spin text-purple-400 mb-4" />
+                  <p className="text-zinc-500">Analyzing your taste profile...</p>
                 </div>
-                
-                <div>
-                  <SectionHeader
-                    icon={Sparkles}
-                    title="Recommended For You"
-                    subtitle="Curated picks based on your taste profile"
-                    gradient="bg-gradient-to-br from-purple-500 to-fuchsia-500"
-                  />
-                  <MovieRow movies={data?.recommended} />
-                </div>
-
-                {data?.searchBasedRecommendations?.movies?.length > 0 && (
+              ) : (
+                <>
                   <div>
                     <SectionHeader
-                      icon={Search}
-                      title={`Because You Searched "${data.searchBasedRecommendations.query}"`}
-                      subtitle="Recommendations based on your recent search query"
-                      gradient="bg-gradient-to-br from-cyan-500 to-blue-500"
-                    />
-                    <MovieRow movies={data.searchBasedRecommendations.movies} />
-                  </div>
-                )}
-
-                <NewReleases />
-                <UpcomingMovies />
-
-                {data?.becauseYouWatched?.map((section) => (
-                  <div key={section.sourceMovie.id}>
-                    <SectionHeader
-                      icon={Eye}
-                      title={`Because You Watched "${section.sourceMovie.title}"`}
-                      subtitle="Movies similar to ones you've enjoyed"
-                      gradient="bg-gradient-to-br from-orange-500 to-red-500"
-                    />
-                    <MovieRow movies={section.recommendations} />
-                  </div>
-                ))}
-
-                {data?.curatedCollections?.map((collection) => (
-                  <div key={collection.id}>
-                    <SectionHeader
                       icon={Sparkles}
-                      title={collection.title}
-                      subtitle={collection.subtitle}
-                      gradient={collection.gradient}
+                      title="Recommended For You"
+                      subtitle="Curated picks based on your taste profile"
+                      gradient="bg-gradient-to-br from-purple-500 to-fuchsia-500"
                     />
-                    <MovieRow movies={collection.movies} />
+                    <MovieRow movies={data?.recommended} />
                   </div>
-                ))}
 
-                <div>
-                  <SectionHeader
-                    icon={Gem}
-                    title="Hidden Gems For Your Taste"
-                    subtitle="Highly rated movies most people haven't discovered"
-                    gradient="bg-gradient-to-br from-amber-500 to-yellow-500"
-                  />
-                  <MovieRow movies={data?.hiddenGems} />
+                  {data?.searchBasedRecommendations?.movies?.length > 0 && (
+                    <div>
+                      <SectionHeader
+                        icon={Search}
+                        title={`Because You Searched "${data.searchBasedRecommendations.query}"`}
+                        subtitle="Recommendations based on your recent search query"
+                        gradient="bg-gradient-to-br from-cyan-500 to-blue-500"
+                      />
+                      <MovieRow movies={data.searchBasedRecommendations.movies} />
+                    </div>
+                  )}
+
+                  <NewReleases />
+                  <UpcomingMovies />
+
+                  {data?.becauseYouWatched?.map((section) => (
+                    <div key={section.sourceMovie.id}>
+                      <SectionHeader
+                        icon={Eye}
+                        title={`Because You Watched "${section.sourceMovie.title}"`}
+                        subtitle="Movies similar to ones you've enjoyed"
+                        gradient="bg-gradient-to-br from-orange-500 to-red-500"
+                      />
+                      <MovieRow movies={section.recommendations} />
+                    </div>
+                  ))}
+
+                  {data?.curatedCollections?.map((collection) => (
+                    <div key={collection.id}>
+                      <SectionHeader
+                        icon={Sparkles}
+                        title={collection.title}
+                        subtitle={collection.subtitle}
+                        gradient={collection.gradient}
+                      />
+                      <MovieRow movies={collection.movies} />
+                    </div>
+                  ))}
+
+                  <div>
+                    <SectionHeader
+                      icon={Gem}
+                      title="Hidden Gems For Your Taste"
+                      subtitle="Highly rated movies most people haven't discovered"
+                      gradient="bg-gradient-to-br from-amber-500 to-yellow-500"
+                    />
+                    <MovieRow movies={data?.hiddenGems} />
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === "activity" && (
+            <motion.div
+              key="activity"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8"
+            >
+              <SectionHeader
+                icon={Users}
+                title="Friends Activity"
+                subtitle="See what your friends are watching and reviewing"
+                gradient="bg-gradient-to-br from-green-500 to-emerald-500"
+              />
+              <FriendsActivityFeed />
+            </motion.div>
+          )}
+
+          {activeTab === "taste" && (
+            <motion.div
+              key="taste"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8"
+            >
+              {tasteLoading && !detailedTaste && !data?.tasteProfile ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 size={40} className="animate-spin text-purple-400 mb-4" />
+                  <p className="text-zinc-500">Loading your taste DNA...</p>
                 </div>
-              </motion.div>
-            )}
-
-            {activeTab === "activity" && (
-              <motion.div
-                key="activity"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mt-8"
-              >
-                <SectionHeader
-                  icon={Users}
-                  title="Friends Activity"
-                  subtitle="See what your friends are watching and reviewing"
-                  gradient="bg-gradient-to-br from-green-500 to-emerald-500"
-                />
-                <FriendsActivityFeed />
-              </motion.div>
-            )}
-
-            {activeTab === "taste" && (
-              <motion.div
-                key="taste"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mt-8"
-              >
+              ) : (
                 <TasteProfileCard
                   tasteProfile={detailedTaste || data?.tasteProfile}
                 />
-              </motion.div>
-            )}
+              )}
+            </motion.div>
+          )}
 
-            {activeTab === "similar-users" && (
-              <motion.div
-                key="similar-users"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mt-8"
-              >
-                <SimilarUsersSection />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
+          {activeTab === "similar-users" && (
+            <motion.div
+              key="similar-users"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8"
+            >
+              <SimilarUsersSection />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="mt-20 pt-10 border-t border-zinc-800/50 space-y-4">
           <TrendingMovies />

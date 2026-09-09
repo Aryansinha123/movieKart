@@ -421,7 +421,7 @@ export default function Navbar() {
 
       {/* Mobile Navigation Trigger */}
       <div className="flex lg:hidden items-center gap-4">
-        {isMounted && user && (pathname === "/" ? <UserSearch /> : <MovieSearch />)}
+        {isMounted && user && <MovieSearch />}
         <button
           id="mobile-menu-trigger"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
