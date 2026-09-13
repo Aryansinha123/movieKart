@@ -11,15 +11,25 @@ const NotificationSchema = new mongoose.Schema(
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
     },
     senderUsername: {
       type: String,
-      required: true,
+      default: "MovieKart",
     },
     type: {
       type: String,
-      enum: ["follow", "like", "invite", "invite_accepted", "edit"],
+      enum: [
+        "follow",
+        "like",
+        "invite",
+        "invite_accepted",
+        "edit",
+        "new_season",
+        "new_episode",
+        "new_movie_installment",
+        "new_part",
+      ],
       required: true,
     },
     collectionId: {
@@ -28,6 +38,28 @@ const NotificationSchema = new mongoose.Schema(
     },
     collectionName: {
       type: String,
+    },
+    movieId: {
+      type: Number,
+    },
+    mediaType: {
+      type: String,
+      enum: ["movie", "tv"],
+    },
+    releaseId: {
+      type: String,
+    },
+    releaseType: {
+      type: String,
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+    },
+    dedupKey: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
     },
     message: {
       type: String,

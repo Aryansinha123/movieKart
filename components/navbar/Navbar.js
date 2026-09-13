@@ -165,7 +165,11 @@ export default function Navbar() {
       );
     } catch (e) {}
     setNotificationsOpen(false);
-    if (n.collectionId) {
+    if (n.metadata?.url) {
+      router.push(n.metadata.url);
+    } else if (n.movieId) {
+      router.push(`/movie/${n.movieId}`);
+    } else if (n.collectionId) {
       router.push(`/collection/${n.collectionId}`);
     }
   }
@@ -285,23 +289,47 @@ export default function Navbar() {
                   {notifications.length === 0 ? (
                     <div className="p-4 text-center text-xs text-zinc-500">No notifications yet.</div>
                   ) : (
-                    notifications.map((n) => (
-                      <button
-                        key={n._id}
-                        onClick={() => handleNotificationClick(n)}
-                        className={`w-full text-left p-3.5 hover:bg-zinc-800/40 transition-colors flex gap-2 items-start ${
-                          !n.read ? "bg-purple-950/10 border-l-2 border-purple-500" : ""
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-zinc-300 leading-normal">{n.message}</p>
-                          <span className="text-[10px] text-zinc-550 block mt-1.5">
-                            {new Date(n.createdAt).toLocaleDateString()}{" "}
-                            {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                      </button>
-                    ))
+                    notifications.map((n) => {
+                      const poster = n.metadata?.posterPath
+                        ? `https://image.tmdb.org/t/p/w92${n.metadata.posterPath}`
+                        : null;
+                      const releaseBadge =
+                        n.type === "new_season"
+                          ? "🎬 New Season"
+                          : n.type === "new_episode"
+                          ? "📺 New Episode"
+                          : n.type === "new_movie_installment"
+                          ? "🍿 New Sequel"
+                          : null;
+
+                      return (
+                        <button
+                          key={n._id}
+                          onClick={() => handleNotificationClick(n)}
+                          className={`w-full text-left p-3.5 hover:bg-zinc-800/40 transition-colors flex gap-3 items-start ${
+                            !n.read ? "bg-purple-950/10 border-l-2 border-purple-500" : ""
+                          }`}
+                        >
+                          {poster && (
+                            <div className="relative w-9 h-12 rounded bg-zinc-800 shrink-0 overflow-hidden border border-zinc-700/60 mt-0.5">
+                              <Image src={poster} alt="Poster" fill sizes="36px" className="object-cover" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            {releaseBadge && (
+                              <span className="inline-block text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 mb-1">
+                                {releaseBadge}
+                              </span>
+                            )}
+                            <p className="text-xs text-zinc-300 leading-normal font-medium">{n.message}</p>
+                            <span className="text-[10px] text-zinc-500 block mt-1">
+                              {new Date(n.createdAt).toLocaleDateString()}{" "}
+                              {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>

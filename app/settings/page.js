@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 import { useUserMovies } from "@/components/providers/UserProvider";
+import { usePushNotification } from "@/components/notifications/PushNotificationManager";
+import { Bell, Smartphone, Tv, Film, Check, Send } from "lucide-react";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -20,7 +22,7 @@ function getUserFromToken(token) {
 export default function SettingsPage() {
   const [token, setToken] = useState("");
   const userFromToken = useMemo(() => getUserFromToken(token), [token]);
-  const [activeTab, setActiveTab] = useState("profile"); // "profile" | "hidden"
+  const [activeTab, setActiveTab] = useState("profile"); // "profile" | "notifications" | "hidden"
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -36,6 +38,12 @@ export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [avatar, setAvatar] = useState("");
   const [preferredLanguages, setPreferredLanguages] = useState([]);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    inAppEnabled: true,
+    pushEnabled: true,
+    tvReleaseMode: "seasons",
+    movieInstallmentsEnabled: true,
+  });
 
   const availableLanguages = [
     { id: "hi", name: "Hindi (Bollywood)" },
@@ -71,7 +79,14 @@ export default function SettingsPage() {
         setUsername(data.user?.username || "");
         setAvatar(data.user?.avatar || "");
         setPreferredLanguages(data.user?.preferredLanguages || []);
-        console.log("Profile loaded from server:", data.user);
+        if (data.user?.notificationPreferences) {
+          setNotificationPreferences({
+            inAppEnabled: data.user.notificationPreferences.inAppEnabled !== false,
+            pushEnabled: data.user.notificationPreferences.pushEnabled !== false,
+            tvReleaseMode: data.user.notificationPreferences.tvReleaseMode || "seasons",
+            movieInstallmentsEnabled: data.user.notificationPreferences.movieInstallmentsEnabled !== false,
+          });
+        }
       } catch (e) {
         if (!cancelled) setError(e?.message || "Failed to load profile.");
       } finally {
@@ -105,23 +120,26 @@ export default function SettingsPage() {
       setError("");
       setSuccess("");
 
-      console.log("Saving preferences to server:", { username, avatar, preferredLanguages });
-
       const res = await fetch("/api/me", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ username, avatar, preferredLanguages }),
+        body: JSON.stringify({
+          username,
+          avatar,
+          preferredLanguages,
+          notificationPreferences,
+        }),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to save changes.");
 
       localStorage.setItem("token", data.token);
-      setToken(data.token); // Update local state!
-      setSuccess("Saved!");
+      setToken(data.token);
+      setSuccess("Settings saved successfully!");
       toast.success("Settings saved!");
     } catch (e) {
       setError(e?.message || "Failed to save changes.");
@@ -150,7 +168,7 @@ export default function SettingsPage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-zinc-400 mt-1">Manage your account preferences and hidden content.</p>
+            <p className="text-zinc-400 mt-1">Manage your account preferences, notifications, and hidden content.</p>
           </div>
           <Link href="/" className="text-sm text-zinc-300 hover:text-white transition-colors">
             Back to Home
@@ -161,18 +179,28 @@ export default function SettingsPage() {
           <button
             onClick={() => setActiveTab("profile")}
             className={`pb-3 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
-              activeTab === "profile" 
-                ? "text-red-500 border-red-500" 
+              activeTab === "profile"
+                ? "text-red-500 border-red-500"
                 : "text-zinc-400 border-transparent hover:text-white"
             }`}
           >
             Edit Profile
           </button>
           <button
+            onClick={() => setActiveTab("notifications")}
+            className={`pb-3 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+              activeTab === "notifications"
+                ? "text-red-500 border-red-500"
+                : "text-zinc-400 border-transparent hover:text-white"
+            }`}
+          >
+            Notifications
+          </button>
+          <button
             onClick={() => setActiveTab("hidden")}
             className={`pb-3 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
-              activeTab === "hidden" 
-                ? "text-red-500 border-red-500" 
+              activeTab === "hidden"
+                ? "text-red-500 border-red-500"
                 : "text-zinc-400 border-transparent hover:text-white"
             }`}
           >
@@ -181,167 +209,379 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6">
-          {activeTab === "profile" ? (
-            isLoading ? (
-              <div className="text-zinc-400">Loading...</div>
-            ) : error ? (
-              <div className="text-red-400">{error}</div>
-            ) : (
-              <>
-                <div className="flex items-center gap-6">
-                  <div className="relative group/avatar">
-                    <div className="w-20 h-20 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center border-2 border-zinc-800 group-hover/avatar:border-red-500/50 transition-colors">
-                      {avatar ? (
-                        <Image
-                          src={avatar}
-                          alt="Avatar"
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-xl font-bold text-zinc-200">
-                          {(username || userFromToken?.username || "U").charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    {avatar && (
-                      <button
-                        type="button"
-                        onClick={() => setAvatar("")}
-                        className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
-                        title="Remove Avatar"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      </button>
+          {isLoading ? (
+            <div className="text-zinc-400">Loading...</div>
+          ) : error ? (
+            <div className="text-red-400">{error}</div>
+          ) : activeTab === "profile" ? (
+            <>
+              <div className="flex items-center gap-6">
+                <div className="relative group/avatar">
+                  <div className="w-20 h-20 rounded-full bg-zinc-800 overflow-hidden flex items-center justify-center border-2 border-zinc-800 group-hover/avatar:border-red-500/50 transition-colors">
+                    {avatar ? (
+                      <Image
+                        src={avatar}
+                        alt="Avatar"
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xl font-bold text-zinc-200">
+                        {(username || userFromToken?.username || "U").charAt(0).toUpperCase()}
+                      </span>
                     )}
                   </div>
-
-                  <div className="flex-1">
-                    <p className="text-sm text-zinc-300 font-medium">Avatar</p>
-                    <div className="mt-2 flex items-center gap-3">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        id="avatar-upload"
-                        onChange={(e) => handleFile(e.target.files?.[0])}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="avatar-upload"
-                        className="cursor-pointer text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg font-semibold transition-colors"
-                      >
-                        Upload New
-                      </label>
-                    </div>
-                    <p className="text-xs text-zinc-500 mt-2">
-                      Tip: use a small image (under ~300KB) for best performance.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <label className="text-sm font-medium text-zinc-300">Username</label>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Username"
-                    className="mt-2 w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none"
-                  />
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Note: username cannot contain “/” and must be 50 characters or less.
-                  </p>
-                </div>
-
-                {/* Language Preferences */}
-                <div className="mt-10 border-t border-zinc-800 pt-8">
-                  <h3 className="text-lg font-semibold text-white">Language Preferences</h3>
-                  <p className="text-sm text-zinc-400 mt-1">
-                    Select your preferred languages. The order determines the priority of recommendations.
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {availableLanguages.map((lang) => {
-                      const isSelected = preferredLanguages.includes(lang.id);
-                      return (
-                        <button
-                          key={lang.id}
-                          type="button"
-                          onClick={() => toggleLanguage(lang.id)}
-                          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                            isSelected
-                              ? "bg-red-500 text-white border-red-500"
-                              : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-700"
-                          }`}
-                        >
-                          {lang.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {preferredLanguages.length > 0 && (
-                    <div className="mt-6 space-y-2">
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                        Priority Order (Drag to reorder - Coming Soon, Use Arrows for now)
-                      </p>
-                      {preferredLanguages.map((langId, index) => {
-                        const lang = availableLanguages.find((l) => l.id === langId);
-                        return (
-                          <div
-                            key={langId}
-                            className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/50 border border-zinc-800 group"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-zinc-500 font-mono text-xs w-4">{index + 1}.</span>
-                              <span className="text-sm font-medium text-zinc-200">{lang?.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={() => moveLanguage(index, -1)}
-                                disabled={index === 0}
-                                className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 disabled:opacity-30"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveLanguage(index, 1)}
-                                disabled={index === preferredLanguages.length - 1}
-                                className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 disabled:opacity-30"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {avatar && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatar("")}
+                      className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                      title="Remove Avatar"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
                   )}
                 </div>
 
-                <div className="mt-6 flex items-center justify-between gap-3">
-                  <div className="text-sm">
-                    {success ? <span className="text-emerald-400">{success}</span> : null}
+                <div className="flex-1">
+                  <p className="text-sm text-zinc-300 font-medium">Avatar</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="avatar-upload"
+                      onChange={(e) => handleFile(e.target.files?.[0])}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="cursor-pointer text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                    >
+                      Upload New
+                    </label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={save}
-                    disabled={isSaving}
-                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-5 py-2 rounded-lg font-semibold transition-colors animate-fade-in"
-                  >
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </button>
+                  <p className="text-xs text-zinc-500 mt-2">
+                    Tip: use a small image (under ~300KB) for best performance.
+                  </p>
                 </div>
-              </>
-            )
+              </div>
+
+              <div className="mt-8">
+                <label className="text-sm font-medium text-zinc-300">Username</label>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="mt-2 w-full p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white outline-none focus:border-zinc-700 transition-colors"
+                />
+                <p className="text-xs text-zinc-500 mt-2">
+                  Note: username cannot contain “/” and must be 50 characters or less.
+                </p>
+              </div>
+
+              {/* Language Preferences */}
+              <div className="mt-10 border-t border-zinc-800 pt-8">
+                <h3 className="text-lg font-semibold text-white">Language Preferences</h3>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Select your preferred languages. The order determines the priority of recommendations.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {availableLanguages.map((lang) => {
+                    const isSelected = preferredLanguages.includes(lang.id);
+                    return (
+                      <button
+                        key={lang.id}
+                        type="button"
+                        onClick={() => toggleLanguage(lang.id)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                          isSelected
+                            ? "bg-red-500 text-white border-red-500"
+                            : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-700"
+                        }`}
+                      >
+                        {lang.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {preferredLanguages.length > 0 && (
+                  <div className="mt-6 space-y-2">
+                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                      Priority Order
+                    </p>
+                    {preferredLanguages.map((langId, index) => {
+                      const lang = availableLanguages.find((l) => l.id === langId);
+                      return (
+                        <div
+                          key={langId}
+                          className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/50 border border-zinc-800 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-zinc-500 font-mono text-xs w-4">{index + 1}.</span>
+                            <span className="text-sm font-medium text-zinc-200">{lang?.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => moveLanguage(index, -1)}
+                              disabled={index === 0}
+                              className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 disabled:opacity-30"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveLanguage(index, 1)}
+                              disabled={index === preferredLanguages.length - 1}
+                              className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 disabled:opacity-30"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <div className="text-sm">
+                  {success ? <span className="text-emerald-400">{success}</span> : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={isSaving}
+                  className="bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-5 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </>
+          ) : activeTab === "notifications" ? (
+            <NotificationPreferencesSection
+              notificationPreferences={notificationPreferences}
+              setNotificationPreferences={setNotificationPreferences}
+              onSave={save}
+              isSaving={isSaving}
+              success={success}
+            />
           ) : (
             <HiddenTitlesSection />
           )}
         </div>
       </div>
     </main>
+  );
+}
+
+// ─── Notification Preferences Section ───────────────────
+function NotificationPreferencesSection({
+  notificationPreferences,
+  setNotificationPreferences,
+  onSave,
+  isSaving,
+  success,
+}) {
+  const { permission, isSubscribed, loading, enablePush, disablePush, sendTestPush } = usePushNotification();
+
+  const handleToggle = (key) => {
+    setNotificationPreferences((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleTvModeChange = (mode) => {
+    setNotificationPreferences((prev) => ({
+      ...prev,
+      tvReleaseMode: mode,
+    }));
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <Bell className="text-red-500" size={20} />
+          New Release Notifications
+        </h2>
+        <p className="text-sm text-zinc-400 mt-1">
+          Receive alerts when a new season, episode, or movie sequel is released for items in your Watchlist, Favorites, Watched, or Collections.
+        </p>
+      </div>
+
+      {/* Browser Push Notifications Opt-In Card */}
+      <div className="p-5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <Smartphone size={22} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base">Browser Push Notifications (PWA)</h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Receive notifications on desktop or phone even when MovieKart is closed.
+              </p>
+            </div>
+          </div>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+            isSubscribed 
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+              : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+          }`}>
+            {isSubscribed ? "Enabled" : permission === "denied" ? "Denied" : "Disabled"}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-zinc-800/60">
+          {!isSubscribed ? (
+            <button
+              type="button"
+              onClick={enablePush}
+              disabled={loading || permission === "denied"}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-600/20"
+            >
+              {loading ? "Enabling..." : "Enable Push Notifications"}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={disablePush}
+                disabled={loading}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition-all cursor-pointer"
+              >
+                {loading ? "Disabling..." : "Disable Push"}
+              </button>
+              <button
+                type="button"
+                onClick={sendTestPush}
+                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-purple-300 font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Send size={14} />
+                Send Test Push
+              </button>
+            </>
+          )}
+          {permission === "denied" && (
+            <p className="text-xs text-red-400">
+              Notification permission is blocked in your browser settings. Please enable notifications for MovieKart in your browser to proceed.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* In-App Notifications Toggle */}
+      <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-900/40 border border-zinc-800">
+        <div>
+          <h4 className="font-semibold text-white text-sm">In-App Notifications</h4>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Display release notifications in the top navigation bell.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleToggle("inAppEnabled")}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            notificationPreferences.inAppEnabled ? "bg-red-500" : "bg-zinc-700"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              notificationPreferences.inAppEnabled ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* TV Series Release Options */}
+      <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800 space-y-4">
+        <div className="flex items-center gap-2 text-white font-bold text-sm">
+          <Tv size={18} className="text-blue-400" />
+          TV Series Release Notifications
+        </div>
+        <p className="text-xs text-zinc-400">
+          Choose what type of TV show updates trigger a notification:
+        </p>
+
+        <div className="space-y-2">
+          {[
+            { id: "seasons", label: "New seasons only (Recommended)", desc: "Notify when a full new season or part is released." },
+            { id: "episodes", label: "New episodes", desc: "Notify whenever a new episode airs." },
+            { id: "both", label: "Both new seasons & new episodes", desc: "Get alerted for every season and episode release." },
+          ].map((mode) => {
+            const isSelected = notificationPreferences.tvReleaseMode === mode.id;
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => handleTvModeChange(mode.id)}
+                className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-start gap-3 cursor-pointer ${
+                  isSelected
+                    ? "bg-red-500/10 border-red-500/50 text-white"
+                    : "bg-zinc-900/30 border-zinc-800 text-zinc-300 hover:border-zinc-700"
+                }`}
+              >
+                <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${
+                  isSelected ? "border-red-500 bg-red-500" : "border-zinc-600"
+                }`}>
+                  {isSelected && <Check size={12} className="text-white" />}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{mode.label}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">{mode.desc}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Movie Installment Notifications */}
+      <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-900/40 border border-zinc-800">
+        <div className="flex items-start gap-3">
+          <Film size={20} className="text-emerald-400 mt-0.5 shrink-0" />
+          <div>
+            <h4 className="font-semibold text-white text-sm">Movie Installment / Sequel Notifications</h4>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Notify when a new sequel or installment in a tracked TMDB collection becomes available.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleToggle("movieInstallmentsEnabled")}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            notificationPreferences.movieInstallmentsEnabled ? "bg-red-500" : "bg-zinc-700"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              notificationPreferences.movieInstallmentsEnabled ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+        <div className="text-sm">
+          {success ? <span className="text-emerald-400">{success}</span> : null}
+        </div>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isSaving}
+          className="bg-red-500 hover:bg-red-600 disabled:opacity-60 disabled:cursor-not-allowed px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-500/20 cursor-pointer"
+        >
+          {isSaving ? "Saving..." : "Save Preferences"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -354,8 +594,7 @@ function HiddenTitlesSection() {
 
   useEffect(() => {
     if (!notInterestedMovies?.length) return;
-    
-    // Hydrate posters dynamically from TMDB via client wrapper
+
     async function fetchPosters() {
       const promises = notInterestedMovies.map(async (m) => {
         try {
@@ -451,7 +690,7 @@ function HiddenTitlesSection() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
           {filtered.map((item) => {
             const posterPath = posters[item.movieId];
-            const displayDate = item.createdAt 
+            const displayDate = item.createdAt
               ? new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
               : "Date unknown";
 
@@ -474,8 +713,7 @@ function HiddenTitlesSection() {
                       {item.title}
                     </div>
                   )}
-                  
-                  {/* Hover Actions overlay */}
+
                   <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-3 p-4 backdrop-blur-sm">
                     <button
                       onClick={() => handleRestore(item.movieId)}
@@ -502,4 +740,3 @@ function HiddenTitlesSection() {
     </div>
   );
 }
-

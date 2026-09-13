@@ -7,6 +7,7 @@ import User from "@/models/User";
 import Activity from "@/models/Activity";
 import CollectionActivity from "@/models/CollectionActivity";
 import Notification from "@/models/Notification";
+import { syncUserReleaseTracking } from "@/lib/releaseTracker";
 
 async function getMovieTitle(movieId) {
   try {
@@ -146,6 +147,8 @@ export async function POST(req, context) {
         actorName,
         `${actorName} added "${movieTitle}" to "${collection.name}"`
       );
+
+      await syncUserReleaseTracking(userData.id);
     }
 
     return NextResponse.json({ success: true, collection });
@@ -197,6 +200,8 @@ export async function DELETE(req, context) {
         actorName,
         `${actorName} removed "${movieTitle}" from "${collection.name}"`
       );
+
+      await syncUserReleaseTracking(userData.id);
     }
 
     return NextResponse.json({ success: true, collection });

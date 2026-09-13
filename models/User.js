@@ -86,6 +86,16 @@ const UserSchema = new mongoose.Schema(
         timestamp: { type: Date, default: Date.now },
       }
     ],
+    notificationPreferences: {
+      inAppEnabled: { type: Boolean, default: true },
+      pushEnabled: { type: Boolean, default: true },
+      tvReleaseMode: {
+        type: String,
+        enum: ["seasons", "episodes", "both"],
+        default: "seasons",
+      },
+      movieInstallmentsEnabled: { type: Boolean, default: true },
+    },
   },
   {
     // Force schema update

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import Activity from "@/models/Activity";
-
+import { syncUserReleaseTracking } from "@/lib/releaseTracker";
 import { getUserFromToken } from "@/lib/getUser";
 
 export async function POST(req) {
@@ -40,6 +40,9 @@ export async function POST(req) {
         meta: {},
       });
     }
+
+    // Synchronize release tracking
+    await syncUserReleaseTracking(user._id);
 
     return NextResponse.json({
       success: true,
@@ -100,6 +103,9 @@ export async function DELETE(req) {
     const user = await User.findById(userData.id);
     user.favorites = (user.favorites || []).filter((id) => id !== movieId);
     await user.save();
+
+    // Synchronize release tracking
+    await syncUserReleaseTracking(user._id);
 
     return NextResponse.json({ success: true, favorites: user.favorites });
   } catch (error) {

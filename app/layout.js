@@ -91,6 +91,7 @@ import { RecentSearchesProvider } from "@/components/providers/RecentSearchesPro
 import { HeroSlidesProvider } from "@/components/providers/HeroSlidesProvider";
 
 import Footer from "@/components/Footer";
+import PushNotificationRegister from "@/components/notifications/PushNotificationManager";
 
 const websiteJsonLd = {
   "@context": "https://schema.org",
@@ -134,6 +135,7 @@ export default function RootLayout({ children }) {
         <UserProvider>
           <RecentSearchesProvider>
             <HeroSlidesProvider>
+              <PushNotificationRegister />
               <Navbar />
               <main className="flex-1">
                 {children}

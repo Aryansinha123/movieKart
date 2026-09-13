@@ -120,6 +120,13 @@ export async function PATCH(req) {
       user.preferredLanguages = nextPreferredLanguages;
       user.markModified("preferredLanguages");
     }
+    if (body.notificationPreferences !== undefined && typeof body.notificationPreferences === "object") {
+      user.notificationPreferences = {
+        ...user.notificationPreferences,
+        ...body.notificationPreferences,
+      };
+      user.markModified("notificationPreferences");
+    }
 
     await user.save();
     console.log(`[PATCH /api/me] User ${user.username} saved successfully.`);
