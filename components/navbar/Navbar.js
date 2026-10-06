@@ -22,7 +22,7 @@ function getUserFromToken(token) {
 }
 
 export default function Navbar() {
-  const { permission, isSubscribed, loading: pushLoading, enablePush, disablePush } = usePushNotification();
+  const { permission, isSubscribed, loading: pushLoading, enablePush, disablePush, sendTestPush } = usePushNotification();
   const router = useRouter();
   const pathname = usePathname();
   // Keep the first render identical between server and client to avoid hydration mismatch.
@@ -39,6 +39,18 @@ export default function Navbar() {
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const notificationsRef = useRef(null);
+
+  // Prevent background scrolling when mobile hamburger menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -466,7 +478,7 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div 
           ref={mobileMenuRef}
-          className="absolute top-full left-0 right-0 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800 p-6 flex flex-col gap-6 lg:hidden animate-in slide-in-from-top-4 duration-300 z-50 shadow-2xl"
+          className="absolute top-full left-0 right-0 max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800 p-6 flex flex-col gap-6 lg:hidden animate-in slide-in-from-top-4 duration-300 z-50 shadow-2xl scroll-smooth touch-pan-y custom-scrollbar"
         >
           {/* Brand name at top of mobile menu */}
           <Link
@@ -627,28 +639,40 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* ── Push Notification Toggle ── */}
-              <button
-                id="mobile-push-toggle"
-                onClick={async () => { if (isSubscribed) await disablePush(); else await enablePush(); }}
-                disabled={pushLoading}
-                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all text-base font-medium ${
-                  isSubscribed
-                    ? "bg-purple-500/10 border-purple-500/40 text-purple-300 hover:bg-purple-500/20"
-                    : permission === "denied"
-                    ? "bg-zinc-800/40 border-zinc-700 text-zinc-500 cursor-not-allowed"
-                    : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
-                } ${pushLoading ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                {isSubscribed
-                  ? <><BellOff size={18} className="text-purple-400" />{pushLoading ? "Disabling…" : "Disable Push Alerts"}</>
-                  : <><Bell size={18} className={permission === "denied" ? "text-zinc-600" : "text-zinc-400"} />
-                     {pushLoading ? "Enabling…" : permission === "denied" ? "Notifications Blocked" : "Enable Push Alerts"}</>
-                }
-                {isSubscribed && !pushLoading && (
-                  <span className="ml-auto text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">ON</span>
+              {/* ── Push Notification Toggle & Test Button ── */}
+              <div className="flex flex-col gap-2">
+                <button
+                  id="mobile-push-toggle"
+                  onClick={async () => { if (isSubscribed) await disablePush(); else await enablePush(); }}
+                  disabled={pushLoading}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all text-base font-medium cursor-pointer ${
+                    isSubscribed
+                      ? "bg-purple-500/10 border-purple-500/40 text-purple-300 hover:bg-purple-500/20"
+                      : permission === "denied"
+                      ? "bg-zinc-800/40 border-zinc-700 text-zinc-500 cursor-not-allowed"
+                      : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  } ${pushLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                >
+                  {isSubscribed
+                    ? <><BellOff size={18} className="text-purple-400" />{pushLoading ? "Disabling…" : "Disable Push Alerts"}</>
+                    : <><Bell size={18} className={permission === "denied" ? "text-zinc-600" : "text-zinc-400"} />
+                       {pushLoading ? "Enabling…" : permission === "denied" ? "Notifications Blocked" : "Enable Push Alerts"}</>
+                  }
+                  {isSubscribed && !pushLoading && (
+                    <span className="ml-auto text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">ON</span>
+                  )}
+                </button>
+
+                {isSubscribed && (
+                  <button
+                    id="mobile-test-push"
+                    onClick={() => sendTestPush({ type: "new_movie" })}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/30 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    <Bell size={14} /> Send Test Push Notification
+                  </button>
                 )}
-              </button>
+              </div>
             </>
           )}
           

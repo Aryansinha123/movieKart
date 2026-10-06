@@ -142,23 +142,28 @@ export function usePushNotification() {
     }
   }
 
-  async function sendTestPush() {
+  async function sendTestPush(payload = {}) {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("/api/push/test", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Test notification sent!");
+        toast.success(data.message || "Test notification sent!");
+        return true;
       } else {
         toast.error(data.message || "Test push failed.");
+        return false;
       }
     } catch (err) {
       toast.error("Failed to trigger test push.");
+      return false;
     }
   }
 

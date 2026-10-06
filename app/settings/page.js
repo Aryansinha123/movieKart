@@ -449,24 +449,56 @@ function NotificationPreferencesSection({
               {loading ? "Enabling..." : "Enable Push Notifications"}
             </button>
           ) : (
-            <>
-              <button
-                type="button"
-                onClick={disablePush}
-                disabled={loading}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition-all cursor-pointer"
-              >
-                {loading ? "Disabling..." : "Disable Push"}
-              </button>
-              <button
-                type="button"
-                onClick={sendTestPush}
-                className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-purple-300 font-semibold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Send size={14} />
-                Send Test Push
-              </button>
-            </>
+            <div className="w-full space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={disablePush}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-xs transition-all cursor-pointer"
+                >
+                  {loading ? "Disabling..." : "Disable Push"}
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-zinc-800/60">
+                <p className="text-xs font-semibold text-zinc-400 mb-2">Test OS-Level Push Notifications:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => sendTestPush({ type: "new_movie" })}
+                    className="px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-purple-900/30 hover:border-purple-500/40 border border-zinc-700/60 text-purple-300 font-medium text-xs text-left transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Send size={13} className="shrink-0" />
+                    <span>🎬 New Movie Added</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => sendTestPush({ type: "trending" })}
+                    className="px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-purple-900/30 hover:border-purple-500/40 border border-zinc-700/60 text-purple-300 font-medium text-xs text-left transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Send size={13} className="shrink-0" />
+                    <span>🔥 Trending Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => sendTestPush({ type: "recommended" })}
+                    className="px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-purple-900/30 hover:border-purple-500/40 border border-zinc-700/60 text-purple-300 font-medium text-xs text-left transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Send size={13} className="shrink-0" />
+                    <span>⭐ Recommended for You</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => sendTestPush({ type: "new_release" })}
+                    className="px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-purple-900/30 hover:border-purple-500/40 border border-zinc-700/60 text-purple-300 font-medium text-xs text-left transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Send size={13} className="shrink-0" />
+                    <span>🎥 New Release</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
           {permission === "denied" && (
             <p className="text-xs text-red-400">
