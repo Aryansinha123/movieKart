@@ -34,6 +34,7 @@ export default function Navbar() {
   
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileNotifOpen, setMobileNotifOpen] = useState(false);
   
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -513,101 +514,139 @@ export default function Navbar() {
           </Link>
           {isMounted && user && (
             <>
-              <div className="flex items-center gap-3 pb-2 border-b border-zinc-800">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-sm font-bold text-white shadow-md overflow-hidden">
+              {/* ── User Info ── */}
+              <div className="flex items-center gap-3 pb-4 border-b border-zinc-800">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-sm font-bold text-white shadow-md overflow-hidden shrink-0">
                   {user?.avatar ? (
-                    <Image
-                      src={user.avatar}
-                      alt="Avatar"
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    userInitial
-                  )}
+                    <Image src={user.avatar} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />
+                  ) : userInitial}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-white font-bold">{user.username || "User"}</p>
                   <p className="text-zinc-500 text-xs truncate max-w-[200px]">{user.email}</p>
                 </div>
               </div>
-              
-              <Link
-                href={`/profile/${user?.username || "user"}`}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
-              >
-                <User size={20} className="text-zinc-400" />
-                My Profile
+
+              {/* ── Nav Links ── */}
+              <Link href={`/profile/${user?.username || "user"}`} onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3">
+                <User size={20} className="text-zinc-400" /> My Profile
               </Link>
-              
-              <Link
-                href="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
-              >
-                <Settings size={20} className="text-zinc-400" />
-                Edit Profile
+              <Link href="/settings" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3">
+                <Settings size={20} className="text-zinc-400" /> Edit Profile
+              </Link>
+              <Link href="/watchlist" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3">
+                <Bookmark size={20} className="text-zinc-400" /> Watchlist
+              </Link>
+              <Link href="/watched" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3">
+                <Eye size={20} className="text-zinc-400" /> Watched
+              </Link>
+              <Link href="/favorites" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3">
+                <Heart size={20} className="text-pink-400" /> Favorites
               </Link>
 
-              <Link
-                href="/watchlist"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
-              >
-                <Bookmark size={20} className="text-zinc-400" />
-                Watchlist
-              </Link>
-              
-              <Link
-                href="/watched"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
-              >
-                <Eye size={20} className="text-zinc-400" />
-                Watched
-              </Link>
-              
-              <Link
-                href="/favorites"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-lg font-medium text-zinc-300 hover:text-white transition-colors flex items-center gap-3"
-              >
-                <Heart size={20} className="text-pink-400" />
-                Favorites
-              </Link>
-              {/* Push Notification Toggle — only shown on mobile (PWA) */}
+              {/* ── Notifications Panel ── */}
+              <div className="border border-zinc-800 rounded-xl overflow-hidden">
+                {/* Accordion header */}
+                <button
+                  id="mobile-notif-toggle"
+                  onClick={() => setMobileNotifOpen((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-zinc-800/60 hover:bg-zinc-800 transition-colors"
+                >
+                  <span className="flex items-center gap-2 text-base font-semibold text-zinc-200">
+                    <Bell size={18} className="text-purple-400" />
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown size={16} className={`text-zinc-400 transition-transform duration-200 ${mobileNotifOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {mobileNotifOpen && (
+                  <div>
+                    {/* Mark all read */}
+                    {unreadCount > 0 && (
+                      <div className="flex justify-end px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs text-purple-400 hover:text-purple-300 font-bold"
+                        >
+                          Mark all as read
+                        </button>
+                      </div>
+                    )}
+
+                    {/* List */}
+                    <div className="max-h-72 overflow-y-auto divide-y divide-zinc-800/60">
+                      {notifications.length === 0 ? (
+                        <p className="p-4 text-center text-xs text-zinc-500">No notifications yet.</p>
+                      ) : (
+                        notifications.map((n) => {
+                          const poster = n.metadata?.posterPath
+                            ? `https://image.tmdb.org/t/p/w92${n.metadata.posterPath}`
+                            : null;
+                          const badge =
+                            n.type === "new_season" ? "🎬 New Season"
+                            : n.type === "new_episode" ? "📺 New Episode"
+                            : n.type === "new_movie_installment" ? "🍿 New Sequel"
+                            : null;
+                          return (
+                            <button
+                              key={n._id}
+                              onClick={() => { handleNotificationClick(n); setMobileMenuOpen(false); }}
+                              className={`w-full text-left p-3.5 hover:bg-zinc-800/40 transition-colors flex gap-3 items-start ${
+                                !n.read ? "bg-purple-950/10 border-l-2 border-purple-500" : ""
+                              }`}
+                            >
+                              {poster && (
+                                <div className="relative w-9 h-12 rounded bg-zinc-800 shrink-0 overflow-hidden border border-zinc-700/60 mt-0.5">
+                                  <Image src={poster} alt="Poster" fill sizes="36px" className="object-cover" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                {badge && (
+                                  <span className="inline-block text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 mb-1">
+                                    {badge}
+                                  </span>
+                                )}
+                                <p className="text-xs text-zinc-300 leading-normal font-medium">{n.message}</p>
+                                <span className="text-[10px] text-zinc-500 block mt-1">
+                                  {new Date(n.createdAt).toLocaleDateString()}{" "}
+                                  {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                              {!n.read && <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0 mt-1.5" />}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Push Notification Toggle ── */}
               <button
                 id="mobile-push-toggle"
-                onClick={async () => {
-                  if (isSubscribed) {
-                    await disablePush();
-                  } else {
-                    await enablePush();
-                  }
-                }}
+                onClick={async () => { if (isSubscribed) await disablePush(); else await enablePush(); }}
                 disabled={pushLoading}
-                className={`text-lg font-medium transition-colors flex items-center gap-3 w-full ${
+                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all text-base font-medium ${
                   isSubscribed
-                    ? "text-purple-400 hover:text-purple-300"
-                    : "text-zinc-300 hover:text-white"
-                } ${pushLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    ? "bg-purple-500/10 border-purple-500/40 text-purple-300 hover:bg-purple-500/20"
+                    : permission === "denied"
+                    ? "bg-zinc-800/40 border-zinc-700 text-zinc-500 cursor-not-allowed"
+                    : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                } ${pushLoading ? "opacity-60 cursor-not-allowed" : ""}`}
               >
-                {isSubscribed ? (
-                  <>
-                    <BellOff size={20} className="text-purple-400" />
-                    {pushLoading ? "Disabling…" : "Disable Notifications"}
-                  </>
-                ) : (
-                  <>
-                    <Bell size={20} className={permission === "denied" ? "text-zinc-600" : "text-zinc-400"} />
-                    {pushLoading
-                      ? "Enabling…"
-                      : permission === "denied"
-                      ? "Notifications Blocked"
-                      : "Enable Notifications"}
-                  </>
+                {isSubscribed
+                  ? <><BellOff size={18} className="text-purple-400" />{pushLoading ? "Disabling…" : "Disable Push Alerts"}</>
+                  : <><Bell size={18} className={permission === "denied" ? "text-zinc-600" : "text-zinc-400"} />
+                     {pushLoading ? "Enabling…" : permission === "denied" ? "Notifications Blocked" : "Enable Push Alerts"}</>
+                }
+                {isSubscribed && !pushLoading && (
+                  <span className="ml-auto text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">ON</span>
                 )}
               </button>
             </>
