@@ -12,18 +12,23 @@ export async function POST(req) {
       return NextResponse.json({ success: true, movies: [] });
     }
 
-    // Limit batch size per request to 50 to avoid network timeouts
-    const targetIds = ids.slice(0, 50);
+    // Fetch all requested movies in batches of 50 concurrently to prevent network timeouts
+    const chunkSize = 50;
+    const movies = [];
 
-    const movies = await Promise.all(
-      targetIds.map(async (id) => {
-        try {
-          return await fetchMovieDetail(String(id));
-        } catch {
-          return null;
-        }
-      })
-    );
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const chunkResults = await Promise.all(
+        chunk.map(async (id) => {
+          try {
+            return await fetchMovieDetail(String(id));
+          } catch {
+            return null;
+          }
+        })
+      );
+      movies.push(...chunkResults);
+    }
 
     const validMovies = movies.filter(Boolean);
 
