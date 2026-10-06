@@ -11,10 +11,12 @@ self.addEventListener("activate", (event) => {
 // ─── Push Notification Event Handler ───────────────────
 self.addEventListener("push", (event) => {
   let data = {
-    title: "MovieKart Release Alert 🎬",
+    title: "MovieKart 🎬",
     body: "A new release is available for your tracked title!",
     icon: "/icon.png",
     badge: "/icon.png",
+    image: null,
+    tag: "moviekart-release",
     data: { url: "/" },
   };
 
@@ -31,10 +33,16 @@ self.addEventListener("push", (event) => {
     body: data.body,
     icon: data.icon || "/icon.png",
     badge: data.badge || "/icon.png",
-    vibrate: [100, 50, 100],
+    // Show movie poster as the large notification image (Android / Chrome)
+    ...(data.image ? { image: data.image } : {}),
+    vibrate: [200, 100, 200],
+    tag: data.tag || "moviekart-release",
+    // renotify: true makes Android re-buzz even when replacing the same tag
+    renotify: true,
+    requireInteraction: false,
     data: data.data || { url: "/" },
     actions: [
-      { action: "view", title: "View Title" },
+      { action: "view", title: "View" },
       { action: "dismiss", title: "Dismiss" },
     ],
   };

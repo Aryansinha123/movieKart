@@ -4,10 +4,11 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings, Heart } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings, Heart, Bell, BellOff } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 import MovieSearch from "@/components/navbar/MovieSearch";
+import { usePushNotification } from "@/components/notifications/PushNotificationManager";
 
 function getUserFromToken(token) {
   if (!token) return null;
@@ -21,6 +22,7 @@ function getUserFromToken(token) {
 }
 
 export default function Navbar() {
+  const { permission, isSubscribed, loading: pushLoading, enablePush, disablePush } = usePushNotification();
   const router = useRouter();
   const pathname = usePathname();
   // Keep the first render identical between server and client to avoid hydration mismatch.
@@ -575,6 +577,39 @@ export default function Navbar() {
                 <Heart size={20} className="text-pink-400" />
                 Favorites
               </Link>
+              {/* Push Notification Toggle — only shown on mobile (PWA) */}
+              <button
+                id="mobile-push-toggle"
+                onClick={async () => {
+                  if (isSubscribed) {
+                    await disablePush();
+                  } else {
+                    await enablePush();
+                  }
+                }}
+                disabled={pushLoading}
+                className={`text-lg font-medium transition-colors flex items-center gap-3 w-full ${
+                  isSubscribed
+                    ? "text-purple-400 hover:text-purple-300"
+                    : "text-zinc-300 hover:text-white"
+                } ${pushLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {isSubscribed ? (
+                  <>
+                    <BellOff size={20} className="text-purple-400" />
+                    {pushLoading ? "Disabling…" : "Disable Notifications"}
+                  </>
+                ) : (
+                  <>
+                    <Bell size={20} className={permission === "denied" ? "text-zinc-600" : "text-zinc-400"} />
+                    {pushLoading
+                      ? "Enabling…"
+                      : permission === "denied"
+                      ? "Notifications Blocked"
+                      : "Enable Notifications"}
+                  </>
+                )}
+              </button>
             </>
           )}
           
