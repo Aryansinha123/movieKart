@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings, Heart, Bell, BellOff } from "lucide-react";
+import { LogIn, User, LogOut, ChevronDown, Bookmark, Eye, Sparkles, Menu, X, Settings, Heart, Bell, BellOff, Trash2 } from "lucide-react";
 import Image from "next/image";
 import UserSearch from "@/components/navbar/UserSearch";
 import MovieSearch from "@/components/navbar/MovieSearch";
@@ -163,6 +163,21 @@ export default function Navbar() {
     } catch (e) {}
   }
 
+  async function handleClearAll() {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications([]);
+      }
+    } catch (e) {}
+  }
+
   async function handleNotificationClick(n) {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -291,14 +306,25 @@ export default function Navbar() {
               <div className="absolute right-0 mt-2 w-80 bg-zinc-900 border border-zinc-750 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-950/60">
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Notifications</span>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllAsRead}
-                      className="text-xs text-purple-400 hover:text-purple-300 font-bold"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllAsRead}
+                        className="text-xs text-purple-400 hover:text-purple-300 font-bold cursor-pointer"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={handleClearAll}
+                        className="text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 size={12} />
+                        Clear all
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/60 custom-scrollbar">
                   {notifications.length === 0 ? (
@@ -578,15 +604,26 @@ export default function Navbar() {
 
                 {mobileNotifOpen && (
                   <div>
-                    {/* Mark all read */}
-                    {unreadCount > 0 && (
-                      <div className="flex justify-end px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
-                        <button
-                          onClick={handleMarkAllAsRead}
-                          className="text-xs text-purple-400 hover:text-purple-300 font-bold"
-                        >
-                          Mark all as read
-                        </button>
+                    {/* Mark all read / Clear all */}
+                    {(unreadCount > 0 || notifications.length > 0) && (
+                      <div className="flex justify-end gap-3 px-4 py-2 bg-zinc-900/80 border-b border-zinc-800">
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-xs text-purple-400 hover:text-purple-300 font-bold cursor-pointer"
+                          >
+                            Mark all as read
+                          </button>
+                        )}
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={handleClearAll}
+                            className="text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                            Clear all
+                          </button>
+                        )}
                       </div>
                     )}
 

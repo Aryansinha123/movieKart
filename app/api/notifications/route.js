@@ -46,3 +46,19 @@ export async function PATCH(req) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req) {
+  try {
+    await connectDB();
+    const userData = getUserFromToken(req);
+    if (!userData) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    await Notification.deleteMany({ recipientId: userData.id });
+
+    return NextResponse.json({ success: true, message: "All notifications cleared." });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
